@@ -1,0 +1,19 @@
+# NLP and Document Loaders
+langchain>=0.1.0
+langchain-community
+PyMuPDF
+tiktoken
+
+# Embeddings and Vector Store
+sentence-transformers
+faiss-cpu
+chromadb
+
+# LLM Frameworks (Optional, based on final choice)
+openai
+huggingface-hub
+
+# Notebook utilities
+jupyter
+pandas
+numpy
