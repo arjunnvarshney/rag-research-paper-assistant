@@ -20,6 +20,13 @@ This paper demonstrates that combining pre-trained parametric and non-parametric
 3. **Mitigating Hallucinations:** Evaluate and minimize the model's reliance on external, unverified knowledge.
 4. **Academic Application:** Create a practical tool that accelerates the literature review process for students and researchers.
 
+## Dataset and Knowledge Base
+The `dataset/` directory acts as the dedicated knowledge base for our retrieval-augmented generation pipeline. The research papers contained within this folder are ingested, split into chunks, and used to generate the dense embeddings that mathematically map into the system's vector database. The system uses this exact dataset to perform semantic retrieval when a user makes a query.
+
+Example literature currently in the dataset includes:
+- **Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks (Lewis et al.):** The primary reference methodology paper our system is built heavily upon.
+- **A Survey Paper on Artificial Intelligence:** Included to demonstrate the system's capacity to digest and answer broader conceptual questions summarizing the AI domain.
+
 ## Planned System Architecture
 The system follows a standard four-step RAG architecture:
 1. **Data Ingestion:** User uploads academic PDFs. The system extracts text and splits it into semantically meaningful chunks with token overlap.
