@@ -1,19 +1,19 @@
-# NLP and Document Loaders
+# NLP and Orchestration Frameworks
 langchain>=0.1.0
 langchain-community
-PyMuPDF
+
+# Document Ingestion and Chunking
+pypdf
 tiktoken
+pymupdf
 
 # Embeddings and Vector Store
 sentence-transformers
 faiss-cpu
-chromadb
-
-# LLM Frameworks (Optional, based on final choice)
-openai
-huggingface-hub
-
-# Notebook utilities
-jupyter
-pandas
 numpy
+
+# LLM APIs
+openai
+
+# Application Frontend (Planned)
+streamlit
