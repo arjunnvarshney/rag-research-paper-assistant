@@ -1,18 +1,36 @@
-# Paper Summary: Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks (Lewis et al., 2020)
+# Student-Friendly Summary: Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks (Lewis et al., 2020)
 
-## High-Level Idea
-Large Pre-trained Language Models (LLMs) store a vast amount of factual knowledge within their parameters, but they are prone to "hallucinations" and their internal knowledge is static (it cannot be updated without retraining). 
-Lewis et al. introduce **RAG (Retrieval-Augmented Generation)**, which combines a pre-trained sequence-to-sequence model (the generator) with a dense vector retrieval mechanism (the retriever).
+## Paper Overview
+This paper, titled **"Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks"** by Patrick Lewis and researchers at Facebook AI Research (FAIR), introduces a new way to build AI models called **RAG**. Think of RAG as giving an AI an "open-book exam" instead of forcing it to rely only on what it memorized before the test. It combines the brainpower of a large language model (like ChatGPT) with a search engine that looks up facts on the fly.
 
-## Architecture
-RAG consists of two main components:
-1. **Retriever (Dense Passage Retriever - DPR):** Given an input query $x$, DPR searches a large corpus (like Wikipedia) to find the top-$k$ most relevant document chunks (passages).
-2. **Generator (BART):** A seq2seq model that takes the original query $x$ combined with the retrieved passages $z$, and generates the final output $y$.
+## Problem Addressed
+Before RAG, large language models (LLMs) were entirely "parametric." This means all their facts were permanently baked into their internal parameters (weights) during training. This caused two major problems:
+1. **Hallucinations:** If the AI didn't know the answer, it would confidently guess or make things up.
+2. **Stale Information:** You couldn't update the AI's knowledge without spending thousands of dollars to completely retrain it.
 
-## Key Findings
-- RAG models can successfully perform knowledge-intensive tasks (Open-domain QA, Fact-checking) by dynamically fetching the most up-to-date and relevant information.
-- It heavily reduces the "hallucination" problem since the generator is grounded by real documents provided in the prompt context.
-- The retrieval index can be hot-swapped or updated without needing to retrain the underlying LLM.
+The paper solves these issues by letting the AI search an external database (like Wikipedia) *before* it tries to answer a question.
 
-## Relevance to our Project
-Our Research Paper Assistant will mimic this RAG architecture on a smaller scale. Instead of Wikipedia, our corpus will consist of user-uploaded academic papers. The system will retrieve relevant text chunks from the papers to answer detailed academic questions.
+## RAG Architecture
+RAG splits the AI's job into two separate components working together in an end-to-end pipeline:
+1. **The Retriever** (The Search Engine)
+2. **The Generator** (The Writer)
+
+Instead of the AI just thinking of an answer instantly, the pipeline looks like this:
+User asks a question $\rightarrow$ Retriever finds relevant documents $\rightarrow$ Generator reads the documents and writes the final answer.
+
+## Retriever Component
+The Retriever is built using something called a Dense Passage Retriever (DPR). When you ask a question, the DPR turns your question into a mathematical vector (a list of numbers). It then searches through millions of pre-computed vectors of text chunks (like Wikipedia paragraphs) to find the closest matches. It returns the top-$k$ (e.g., top 5) most relevant text chunks directly related to your question.
+
+## Generator Component
+The Generator in this paper is a pre-trained sequence-to-sequence model called BART. Once the Retriever finds the top 5 relevant text chunks, the Generator reads both your original question *and* the text chunks at the same time. The Generator's job is to read this provided context and synthesize those facts into a fluent, conversational answer. 
+
+## Advantages of RAG
+- **Less Guessing:** The model is grounded by real documents, so it makes up facts far less often.
+- **Easy to Update Ideas:** You don't need to rebuild the AI to teach it new facts. You simply add new text files to the Retriever's search database.
+- **Fact-Checking (Citations):** Because the AI shows you exactly which text chunks it looked at, you can easily verify its sources.
+
+## How this project uses the ideas from this paper
+Our "GenAI Research Paper Assistant" is basically building a mini-version of the Facebook AI researchers' RAG system!
+- Instead of searching all of Wikipedia, our **Retriever** will only search through the PDFs of academic research papers we give it.
+- When an academic user asks a tough question about the methodology in those papers, our system will pull up the exact paragraphs from the PDFs.
+- Finally, our **Generator** (using Langchain) will read those paragraphs and explain the concept back to the user clearly, completely avoiding hallucinations.
