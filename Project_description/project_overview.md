@@ -9,6 +9,20 @@ Current state-of-the-art conversational AI models often struggle with knowledge-
 ## Motivation
 The motivation for this project stems from the time-consuming and labor-intensive nature of comprehensive literature reviews and academic data extraction. Reading through dense, complex scientific papers to locate heavily embedded facts is a significant bottleneck in the research workflow. By developing an assistant grounded in the principles outlined in "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks" (Lewis et al., 2020), this project aims to create a robust tool that not only accelerates the research process but also ensures the highest level of factual integrity. The RAG architecture provides an elegant solution by decoupling the information retrieval process from text generation, allowing for transparent, verifiable, and dynamic knowledge synthesis.
 
+## Why Retrieval-Augmented Generation (RAG)?
+
+### Limitations of Traditional LLMs
+Traditional Large Language Models (LLMs) are powerful but come with inherent limitations. They generate answers based solely on the data they were trained on, which is often outdated or lacks highly specific, niche information. Because they cannot access real-time or private data, they often guess or "hallucinate" incorrect facts when asked about specialized academic topics.
+
+### The Need for External Knowledge
+In academic research, precision is critical. An AI assistant must be able to cite exact methodologies, findings, and data points from specific, newly published papers. Since it is computationally expensive and impractical to constantly retrain an LLM every time a new paper is released, the AI needs a way to instantly read and incorporate external, user-provided knowledge on the fly.
+
+### Benefits of RAG
+Retrieval-Augmented Generation solves these problems by connecting the AI to an external database of documents before it generates an answer. This approach provides several key benefits:
+- **High Accuracy:** The LLM's answers are directly grounded in the specific academic papers you provide, ensuring reliable and factually correct responses.
+- **Reduced Hallucinations:** Because the AI is strictly instructed to only use the retrieved text as context, the chance of it making up fake facts is drastically reduced.
+- **Context Awareness:** The system mathematically finds the most relevant paragraphs from long, dense papers and feeds that exact context to the AI, allowing it to answer complex inquiries intelligently.
+
 ## Objectives
 The primary objectives of this academic mini-project are as follows:
 1. **Develop a Robust Parsing Pipeline:** Construct an ingestion pipeline capable of accurately extracting and structuring raw text from academic PDF documents using optimal chunking strategies.
