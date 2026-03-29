@@ -48,7 +48,7 @@ The system follows a standard four-step RAG architecture:
 - **Document Parsers:** `PyMuPDF`, `pdfplumber`
 - **Embeddings:** HuggingFace `sentence-transformers` (e.g., `all-MiniLM-L6-v2`)
 - **Vector Store:** `FAISS` / `ChromaDB`
-- **Generative Model:** Local LLM (e.g., HuggingFace Hub integration) or OpenAI API (if credits permit)
+- **Generative Model:** Groq API (Free Meta Llama 3: `llama-3.1-8b-instant`)
 - **Frontend (Planned):** `Streamlit` or `Gradio` for rapid UI prototyping
 
 ## Current Progress
@@ -58,10 +58,13 @@ The system follows a standard four-step RAG architecture:
 - [x] Established the initial `README.md` and project requirement parameters.
 - [x] Created starter Jupyter notebooks for the retrieval pipeline.
 
+*Phase 2: RAG Backend Constructed*
+- [x] Implemented the PDF ingestion and chunking logic (`ingest.py`).
+- [x] Established the local FAISS Vector Store and tested embedding semantic similarity (`vector_store.py`).
+- [x] Integrated the Generative LLM via Groq and constructed the retrieval QA chain (`qa_chain.py`).
+
 ## Future Work
-*Phase 2 & 3: Implementation & UI*
-- [ ] Implement the PDF ingestion and chunking logic.
-- [ ] Establish the local Vector Store and test embedding cosine similarity.
-- [ ] Integrate the Generative LLM and construct the retrieval QA chain.
-- [ ] Build a lightweight graphical user interface (GUI) to allow non-technical users to upload papers and chat with the assistant.
+*Phase 3: User Interface & Evaluation*
+- [ ] Build a lightweight graphical user interface (GUI) using Streamlit to allow users to interact dynamically and view citations.
+- [ ] Implement Conversational Memory to allow follow-up questions gracefully.
 - [ ] Conduct rigorous testing on standard academic queries to benchmark hallucination rates and exact-match performance.
