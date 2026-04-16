@@ -1,19 +1,10 @@
-# NLP and Orchestration Frameworks
-langchain>=0.1.0
+langchain
+langchain-core
 langchain-community
-
-# Document Ingestion and Chunking
-pypdf
-tiktoken
-pymupdf
-
-# Embeddings and Vector Store
-sentence-transformers
+langchain-huggingface
+langchain-groq
+python-dotenv
 faiss-cpu
-numpy
-
-# LLM APIs
-openai
-
-# Application Frontend (Planned)
+sentence-transformers
+PyMuPDF
 streamlit
