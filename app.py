@@ -11,14 +11,14 @@ st.markdown("Ask highly specific academic questions based on your ingested resea
 
 # 1. Initialize the RAG Backend 
 @st.cache_resource(show_spinner="Loading Vector Database and LLM...")
-def initialize_system():
+def initialize_core_system():
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     DB_PATH = os.path.join(BASE_DIR, "faiss_index")
     vector_store = load_vector_store(DB_PATH)
     rag_chain = create_rag_chain(vector_store)
     return rag_chain
 
-rag_chain = initialize_system()
+rag_chain = initialize_core_system()
 
 if not rag_chain:
     st.error("⚠️ GROQ_API_KEY is missing! Please check your .env file.")

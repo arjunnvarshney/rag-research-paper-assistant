@@ -36,8 +36,8 @@ def create_rag_chain(vector_store):
     llm = ChatGroq(temperature=0, model_name="llama-3.1-8b-instant")
     
     template = """You are a highly intelligent academic Research Paper Assistant.
-You must answer the user's question based strictly on the provided Context excerpts.
-If the answer is not present in the Context, you must say "I don't know based on the provided research papers," do not guess or hallucinate any outside facts.
+For any questions regarding facts, concepts, or information, you MUST answer based strictly on the provided Context excerpts. If the answer is not present in the Context, you must say "I don't know based on the provided research papers," do not guess or hallucinate outside facts.
+However, you are allowed to politely respond to simple casual greetings or conversational pleasantries (like "hello", "hi", "how are you", "okay", "thanks") in a friendly manner without referencing the context.
 
 Chat History: 
 {chat_history}
@@ -62,7 +62,11 @@ Detailed, academic Answer:"""
     # Outer Chain: Passes the retrieved documents through without converting them to a string 
     # so we can use them for our UI Citations!
     rag_chain_with_source = RunnableParallel(
-        {"context": retriever, "input": itemgetter("input"), "chat_history": itemgetter("chat_history")}
+        {
+            "context": itemgetter("input") | retriever, 
+            "input": itemgetter("input"), 
+            "chat_history": itemgetter("chat_history")
+        }
     ).assign(answer=rag_chain_from_docs)
     
     return rag_chain_with_source
