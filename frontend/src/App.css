@@ -132,6 +132,39 @@ body {
   margin-bottom: 15px;
 }
 
+.action-bar {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  align-items: center;
+  margin-top: 15px;
+}
+
+.action-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  padding: 8px 15px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.action-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.danger-btn {
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.danger-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
 .upload-container {
   display: flex;
   justify-content: center;
@@ -289,6 +322,29 @@ body {
 
 .input-area textarea:focus {
   border-color: var(--accent);
+}
+
+.mic-btn {
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  color: white;
+  border-radius: 12px;
+  padding: 0 15px;
+  height: 50px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.mic-btn.listening {
+  background: rgba(239, 68, 68, 0.4);
+  border-color: #ef4444;
+  animation: pulse 1s infinite alternate;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.1); box-shadow: 0 0 10px red; }
 }
 
 .send-btn {

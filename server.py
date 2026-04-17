@@ -150,6 +150,20 @@ async def chat_endpoint(request: ChatRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/wipe")
+async def wipe_memory():
+    """Destroys FAISS memory context permanently across sessions."""
+    global vector_store, rag_chain
+    vector_store = None
+    rag_chain = None
+    
+    if os.path.exists(DATASET_DIR):
+        try:
+            shutil.rmtree(DATASET_DIR)
+        except Exception:
+            pass # Failsafe against write-locks
+    return {"success": True, "message": "Memory Wiped"}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
