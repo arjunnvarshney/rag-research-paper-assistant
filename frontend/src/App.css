@@ -448,3 +448,36 @@ body {
 .voice-btn:hover {
   background: rgba(255, 255, 255, 0.15);
 }
+
+/* Suggested Predictive Copilot Chips */
+.suggestion-chips {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chip-title {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.chip-option {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--accent);
+  color: var(--text-primary);
+  text-align: left;
+  padding: 10px 15px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chip-option:hover {
+  background: var(--accent);
+  transform: translateX(5px);
+  color: white;
+}

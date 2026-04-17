@@ -98,14 +98,26 @@ async def chat_endpoint(request: ChatRequest):
         raise HTTPException(status_code=500, detail="The AI brain isn't initialized yet. Please upload a PDF first!")
     
     try:
+        # Secretly force the LLM to generate predicted follow-up queries!
+        augmented_query = request.query + "\n\n(IMPORTANT: At the very end of your answer, you MUST append the exact delimiter '|||' followed by exactly 3 short, intelligent suggested follow-up questions the user can ask next, separated by '|||'.)"
+        
         response = rag_chain.invoke({
-            "input": request.query,
+            "input": augmented_query,
             "chat_history": request.chat_history
         })
         
-        answer = response["answer"]
+        raw_answer = response["answer"]
         sources = []
+        suggestions = []
         
+        # Parse out the secret suggestions
+        if "|||" in raw_answer:
+            parts = raw_answer.split("|||")
+            answer = parts[0].strip()
+            suggestions = [p.strip() for p in parts[1:] if p.strip()][:3] # Grab maximum 3 suggestions safely
+        else:
+            answer = raw_answer
+
         # 🌐 AGENTIC HYBRID RAG: Live Internet Web Search Fallback!
         if "don't know" in answer.lower() or "not present in the context" in answer.lower():
             try:
@@ -113,26 +125,29 @@ async def chat_endpoint(request: ChatRequest):
                 from langchain_groq import ChatGroq
                 from langchain_core.prompts import PromptTemplate
                 
-                # Fetch live data autonomously
                 search = DuckDuckGoSearchRun()
                 web_results = search.run(request.query)
                 
-                # Resynthesize web data through Llama 3
                 llm = ChatGroq(temperature=0.4, model_name="llama-3.1-8b-instant")
                 fallback_prompt = PromptTemplate.from_template(
-                    "You are a helpful AI assistant. The user asked: '{query}'. Provide a highly accurate, brief answer using strictly this live internet data: {web_data}"
+                    "You are an AI. The user asked: '{query}'. Answer this using entirely live internet data: {web_data}\nAfter your answer, append '|||' and 3 short follow-up questions separated by '|||'."
                 )
-                fallback_chain = fallback_prompt | llm
-                fallback_ans = fallback_chain.invoke({"query": request.query, "web_data": web_results[:3000]})
+                fallback_ans = (fallback_prompt | llm).invoke({"query": request.query, "web_data": web_results[:3000]})
                 
-                answer = "🌐 *Web Search Fallback Triggered*\n\n" + fallback_ans.content
+                # Check for suggestions in fallback!
+                if "|||" in fallback_ans.content:
+                    f_parts = fallback_ans.content.split("|||")
+                    answer = "🌐 *Web Search Fallback Triggered*\n\n" + f_parts[0].strip()
+                    suggestions = [p.strip() for p in f_parts[1:] if p.strip()][:3]
+                else:
+                    answer = "🌐 *Web Search Fallback Triggered*\n\n" + fallback_ans.content
+                    
                 sources.append({
                     "page_content": web_results[:400] + "...", 
                     "source_file": "Live Internet (DuckDuckGo Engine)", 
                     "page": "Web Search"
                 })
             except Exception as e:
-                # If internet crashes, default to simple failure safely
                 pass
         else:
             # 📄 Traditional Document Citations
@@ -145,7 +160,8 @@ async def chat_endpoint(request: ChatRequest):
             
         return {
             "answer": answer,
-            "sources": sources
+            "sources": sources,
+            "suggestions": suggestions
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -1,12 +1,56 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
 
+// ⌨️ FEATURE: Simulated LLM Typing Engine
+const TypewriterMessage = ({ msgObj, onComplete }) => {
+  const [displayedText, setDisplayedText] = useState("");
+  
+  useEffect(() => {
+    let index = 0;
+    setDisplayedText("");
+    const interval = setInterval(() => {
+       if (index < msgObj.text.length) {
+         setDisplayedText(prev => prev + msgObj.text.charAt(index));
+         index++;
+       } else {
+         clearInterval(interval);
+         if (onComplete) onComplete();
+       }
+    }, 10); // Streaming speed
+    return () => clearInterval(interval);
+  }, [msgObj.text]);
+
+  const isDone = displayedText.length === msgObj.text.length;
+
+  return (
+    <>
+       <p style={{ whiteSpace: "pre-wrap" }}>
+         {displayedText}{(displayedText.length < msgObj.text.length) ? " █" : ""}
+       </p>
+       
+       {isDone && msgObj.sources && msgObj.sources.length > 0 && (
+         <details className="citation-box" style={{ marginTop: '15px' }}>
+           <summary>📄 View Source Citations</summary>
+           <div className="citation-content">
+             {msgObj.sources.map((s, idx) => (
+               <div key={idx} className="source-item">
+                 <strong>Source {idx + 1}: {s.source_file} (Page {s.page})</strong>
+                 <p className="source-snippet">"{s.page_content}"</p>
+               </div>
+             ))}
+           </div>
+         </details>
+       )}
+    </>
+  );
+};
+
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [password, setPassword] = useState('');
 
   const [messages, setMessages] = useState([
-    { role: 'assistant', text: 'Hello! I am your advanced Academic Assistant! I have securely parsed and modeled your Pdfs into our mathematical FAISS vector space. What would you like to ask?' }
+    { role: 'assistant', text: 'Hello! I am your advanced Academic Assistant. I have securely parsed and modeled your PDFs into our mathematical FAISS vector space.\n\nWhat would you like to ask?' }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -15,7 +59,6 @@ function App() {
   const [uploading, setUploading] = useState(false);
   const [selectedPdfUrl, setSelectedPdfUrl] = useState(null);
   
-  // Mic state
   const [isListening, setIsListening] = useState(false);
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -26,7 +69,6 @@ function App() {
     endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading, uploading]);
 
-  // FEATURE 1: Text-To-Speech
   const handleSpeak = (text) => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
@@ -36,7 +78,6 @@ function App() {
     }
   };
 
-  // FEATURE 2: Speech-to-Text Microphone Integration
   const toggleListening = () => {
     if (!SpeechRecognition) {
       alert("Microphone unsupported in this browser.");
@@ -57,7 +98,6 @@ function App() {
     recognition.start();
   };
 
-  // FEATURE 3: Thesis Exporter
   const exportLog = () => {
     let logText = "👨‍🔬 GenAI Academic Research Log\n===============================\n\n";
     messages.forEach(m => {
@@ -72,16 +112,10 @@ function App() {
     URL.revokeObjectURL(url);
   };
 
-  // FEATURE 4: Wipe Memory Secure Backend Link
   const resetDashboard = async () => {
-    if (!window.confirm("Are you sure you want to securely wipe the AI's FAISS mathematical memory and delete your session?")) return;
-    
-    try {
-      await fetch("http://localhost:8000/api/wipe", { method: "POST" });
-    } catch (e) {
-      console.log("Memory wipe networking error", e);
-    }
-    setMessages([{ role: 'assistant', text: '🧹 Memory completely wiped. Vector indices destroyed. Starting a fresh research session! Please upload a new PDF.' }]);
+    if (!window.confirm("Are you sure you want to securely wipe the AI's FAISS mathematical memory?")) return;
+    try { await fetch("http://localhost:8000/api/wipe", { method: "POST" }); } catch (e) { }
+    setMessages([{ role: 'assistant', text: '🧹 Memory professionally wiped. Starting a fresh research session! Please upload a new PDF.' }]);
     setChatHistoryStr('');
     setSelectedPdfUrl(null);
     setInput('');
@@ -95,25 +129,22 @@ function App() {
     setSelectedPdfUrl(instantVisualUrl);
 
     setUploading(true);
-    setMessages(prev => [...prev, { role: 'assistant', text: `⏳ Uploading and deeply analyzing '${file.name}'... The AI is mathematically processing the document now.` }]);
+    setMessages(prev => [...prev, { role: 'assistant', text: `⏳ Analyzing '${file.name}' into vector space...` }]);
 
     const formData = new FormData();
     formData.append('file', file);
 
     try {
-      const res = await fetch("http://localhost:8000/api/upload", {
-        method: "POST",
-        body: formData
-      });
+      const res = await fetch("http://localhost:8000/api/upload", { method: "POST", body: formData });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Upload failed");
       
       setMessages(prev => [...prev, { 
         role: 'assistant', 
-        text: `✅ **Success!** I have mathematically processed and ingested *${file.name}*.\n\n**🤖 Automated Executive Summary:**\n${data.summary}\n\nWhat highly specific questions do you have about this research?` 
+        text: `✅ **Success!** I have ingested *${file.name}*.\n\n**🤖 Executive Summary:**\n${data.summary}\n\nWhat questions do you have?` 
       }]);
     } catch (err) {
-      setMessages(prev => [...prev, { role: 'assistant', text: `⚠️ Error during upload: ${err.message}` }]);
+      setMessages(prev => [...prev, { role: 'assistant', text: `⚠️ Error: ${err.message}` }]);
       setSelectedPdfUrl(null);
     } finally {
       setUploading(false);
@@ -121,12 +152,13 @@ function App() {
     }
   };
 
-  const handleSend = async () => {
-    if (!input.trim()) return;
+  // 🔮 FEATURE: Overridden Send command dynamically triggers clicks from suggestion chips!
+  const handleSend = async (overrideText = null) => {
+    const userMsg = overrideText || input.trim();
+    if (!userMsg) return;
     
-    const userMsg = input.trim();
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
-    setInput('');
+    if(!overrideText) setInput('');
     setLoading(true);
 
     try {
@@ -140,10 +172,12 @@ function App() {
 
       const data = await res.json();
       
+      // Inject AI response + 3 secret suggested Prompts
       setMessages(prev => [...prev, { 
         role: 'assistant', 
         text: data.answer,
-        sources: data.sources 
+        sources: data.sources,
+        suggestions: data.suggestions
       }]);
 
       setChatHistoryStr(prev => prev + `User: ${userMsg}\nAI: ${data.answer}\n`);
@@ -161,7 +195,6 @@ function App() {
     }
   }
 
-  // PORTAL LOGIN
   if (!isLoggedIn) {
     return (
       <div className="app-container login-screen">
@@ -178,7 +211,7 @@ function App() {
              onChange={(e) => setPassword(e.target.value)}
              onKeyDown={(e) => e.key === 'Enter' && password === 'admin' ? setIsLoggedIn(true) : null}
           />
-          <button onClick={() => password === 'admin' ? setIsLoggedIn(true) : alert('Invalid Security Key!')} className="send-btn login-btn">
+          <button onClick={() => password === 'admin' ? setIsLoggedIn(true) : alert('Invalid Key')} className="send-btn login-btn">
              Access AI Portal
           </button>
         </div>
@@ -186,7 +219,6 @@ function App() {
     );
   }
 
-  // MAIN DASHBOARD
   return (
     <div className={`app-container ${selectedPdfUrl ? 'split-view' : ''}`}>
       <div className="blob blob-1"></div>
@@ -198,18 +230,11 @@ function App() {
           <p>Powered by FastAPI, LangChain, and Meta Llama 3</p>
           
           <div className="action-bar">
-            {/* Download Thesis Chat Log */}
             <button className="action-btn" onClick={exportLog} title="Export to .txt">📥 Export Log</button>
-            <button className="action-btn danger-btn" onClick={resetDashboard} title="Wipe Dashboard Memory">🧠 Reset AI Memory</button>
+            <button className="action-btn danger-btn" onClick={resetDashboard} title="Wipe Dashboard Memory">🧠 Reset AI</button>
 
             <div className="upload-container">
-              <input 
-                 type="file" 
-                 accept="application/pdf"
-                 ref={fileInputRef}
-                 style={{ display: 'none' }}
-                 onChange={handleFileUpload}
-              />
+              <input type="file" accept="application/pdf" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileUpload} />
               <button className="upload-btn" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
                 {uploading ? "⏳ Analyzing..." : "➕ Upload Dynamic PDF"}
               </button>
@@ -221,24 +246,30 @@ function App() {
           {messages.map((msg, i) => (
              <div key={i} className={`message-wrapper ${msg.role === 'user' ? 'align-right' : 'align-left'}`}>
                <div className={`message-bubble ${msg.role}`}>
-                 <p>{msg.text}</p>
+                 
+                 {/* Trigger Animated Stream effect if AI, or print User Text flatly */}
+                 {msg.role === 'assistant' ? (
+                   <TypewriterMessage msgObj={msg} />
+                 ) : (
+                   <p style={{ whiteSpace: "pre-wrap" }}>{msg.text}</p>
+                 )}
                 
                  {msg.role === 'assistant' && (
-                   <button className="voice-btn" onClick={() => handleSpeak(msg.text)}>🔊 Read Aloud</button>
+                   <div className="ai-buttons">
+                     <button className="voice-btn" onClick={() => handleSpeak(msg.text)}>🔊 Read Voice</button>
+                   </div>
                  )}
 
-                 {msg.sources && msg.sources.length > 0 && (
-                   <details className="citation-box">
-                     <summary>📄 View Source Citations</summary>
-                     <div className="citation-content">
-                       {msg.sources.map((s, idx) => (
-                         <div key={idx} className="source-item">
-                           <strong>Source {idx + 1}: {s.source_file} (Page {s.page})</strong>
-                           <p className="source-snippet">"{s.page_content}"</p>
-                         </div>
-                       ))}
-                     </div>
-                   </details>
+                 {/* Render 🔮 Predictive Copilot Follow-Up Question Chips */}
+                 {msg.suggestions && msg.suggestions.length > 0 && (
+                   <div className="suggestion-chips">
+                      <p className="chip-title">✨ Suggested Follow-Ups:</p>
+                      {msg.suggestions.map((sug, idx) => (
+                         <button key={idx} className="chip-option" onClick={() => handleSend(sug)}>
+                           {sug}
+                         </button>
+                      ))}
+                   </div>
                  )}
                </div>
              </div>
@@ -253,7 +284,6 @@ function App() {
               </div>
             </div>
           )}
-          
           <div ref={endOfMessagesRef} />
         </div>
 
@@ -265,10 +295,8 @@ function App() {
             onKeyDown={handleKeyDown}
             rows={1}
           />
-          <button onClick={toggleListening} className={`mic-btn ${isListening ? 'listening' : ''}`} title="Voice Dictation">
-            🎤
-          </button>
-          <button onClick={handleSend} disabled={!input.trim() || loading} className="send-btn">
+          <button onClick={toggleListening} className={`mic-btn ${isListening ? 'listening' : ''}`} title="Voice Dictation">🎤</button>
+          <button onClick={() => handleSend(input)} disabled={!input.trim() || loading} className="send-btn">
             {loading ? "..." : "Send"}
           </button>
         </div>
