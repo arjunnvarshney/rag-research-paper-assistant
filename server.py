@@ -1,63 +1,116 @@
 import os
-from fastapi import FastAPI, HTTPException
+import shutil
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
-# Import our backend RAG pipeline components exactly as they were!
+# Import our backend RAG pipeline components
 from qa_chain import load_vector_store, create_rag_chain
+from ingest import load_all_pdfs, chunk_documents
+from vector_store import create_vector_store
 
 load_dotenv()
 
-app = FastAPI(title="RAG Research Assistant API")
+app = FastAPI(title="Dynamic RAG AI Server")
 
-# Allow requests from our React frontend so they can securely communicate
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # In production, restrict this to your frontend URL
+    allow_origins=["*"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# 1. Initialize the RAG Backend System once on server boot
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "faiss_index")
-print("Initializing LLM Vector System...")
-vector_store = load_vector_store(DB_PATH)
-rag_chain = create_rag_chain(vector_store)
+DATASET_DIR = os.path.join(BASE_DIR, "dataset")
 
-if rag_chain is None:
-    print("WARNING: GROQ_API_KEY is not set. The endpoint will fail.")
+# Global variables so that we can HOT-SWAP the brain when a new PDF is uploaded!
+global vector_store
+global rag_chain
 
-# 2. Define the Request Data Model
+print("Initializing AI Brain...")
+try:
+    vector_store = load_vector_store(DB_PATH)
+    rag_chain = create_rag_chain(vector_store)
+except Exception as e:
+    print(f"Warning: Database not found or corrupt. AI will initialize upon first PDF upload. ({e})")
+    vector_store = None
+    rag_chain = None
+
 class ChatRequest(BaseModel):
     query: str
     chat_history: str = ""
 
-# 3. Create the robust `/api/chat` Endpoint
+@app.post("/api/upload")
+async def upload_document(file: UploadFile = File(...)):
+    """
+    Dynamically ingests a user-uploaded PDF into the AI's mathematical brain.
+    """
+    global vector_store
+    global rag_chain
+    
+    os.makedirs(DATASET_DIR, exist_ok=True)
+    file_path = os.path.join(DATASET_DIR, file.filename)
+    
+    # Save the PDF to disk securely
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
+    try:
+        # Dynamically trigger the ingestion pipeline!
+        documents = load_all_pdfs(DATASET_DIR)
+        chunks = chunk_documents(documents)
+        
+        # Completely re-create and save the FAISS vector index with the new chunks
+        vector_store = create_vector_store(chunks, DB_PATH)
+        rag_chain = create_rag_chain(vector_store)
+        
+        # 🚀 Generate Automated Executive Summary:
+        # Extract the first 4 chunks (usually Title, Abstract, and Intro) of the uploaded file
+        latest_chunks = [c.page_content for c in chunks if c.metadata.get("source_file") == file.filename][:4]
+        combined_text = "\n\n".join(latest_chunks)
+        
+        summary = "No readable text found for summarization."
+        if combined_text.strip():
+            from langchain_groq import ChatGroq
+            from langchain_core.prompts import PromptTemplate
+            llm_summarizer = ChatGroq(temperature=0.2, model_name="llama-3.1-8b-instant")
+            summary_prompt = PromptTemplate.from_template(
+                "You are an expert academic researcher. Read the following introductory excerpts from a newly uploaded document named '{filename}':\n\n{text}\n\nWrite a concise 2-paragraph executive summary detailing the core problem and the proposed solution of this paper. Make it sound extremely professional and engaging."
+            )
+            summary_chain = summary_prompt | llm_summarizer
+            summary_res = summary_chain.invoke({"filename": file.filename, "text": combined_text})
+            summary = summary_res.content
+        
+        return {
+            "success": True, 
+            "message": f"'{file.filename}' processed safely.", 
+            "summary": summary
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to ingest document: {str(e)}")
+
 @app.post("/api/chat")
 async def chat_endpoint(request: ChatRequest):
     if not rag_chain:
-        raise HTTPException(status_code=500, detail="LLM Chain is not initialized. Check your Groq API keys.")
+        raise HTTPException(status_code=500, detail="The AI brain isn't initialized yet. Please upload a PDF first!")
     
     try:
-        # Pass the request to our LCEL architecture
         response = rag_chain.invoke({
             "input": request.query,
             "chat_history": request.chat_history
         })
         
-        # Serialize the mathematical Document context into clean JSON for the React frontend
         sources = []
         for doc in response["context"]:
             sources.append({
-                "page_content": doc.page_content[:400] + "...",  # Sending a snippet of the citation
+                "page_content": doc.page_content[:400] + "...", 
                 "source_file": doc.metadata.get("source_file", "Unknown Document"),
                 "page": doc.metadata.get("page", "?")
             })
             
-        # Deliver the payload back to React
         return {
             "answer": response["answer"],
             "sources": sources
@@ -67,5 +120,4 @@ async def chat_endpoint(request: ChatRequest):
 
 if __name__ == "__main__":
     import uvicorn
-    # Start the robust Uvicorn ASGI Web Server
     uvicorn.run(app, host="127.0.0.1", port=8000)

@@ -8,33 +8,63 @@ function App() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [chatHistoryStr, setChatHistoryStr] = useState('');
+  
+  // File Upload states
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
   const endOfMessagesRef = useRef(null);
 
-  // Auto-scroll to the bottom of the chat when new messages appear
   useEffect(() => {
     endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, loading]);
+  }, [messages, loading, uploading]);
+
+  // Handle Dynamic PDF Upload
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    setUploading(true);
+    // Optimistically tell user what's happening
+    setMessages(prev => [...prev, { role: 'assistant', text: `⏳ Uploading and deeply analyzing '${file.name}'... The AI is mathematically processing the document now.` }]);
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      // Stream the PDF to Python Backend
+      const res = await fetch("http://127.0.0.1:8000/api/upload", {
+        method: "POST",
+        body: formData
+      });
+      
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Upload failed");
+      
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        text: `✅ **Success!** I have mathematically processed and ingested *${file.name}*.\n\n**🤖 Automated Executive Summary:**\n${data.summary}\n\nWhat highly specific questions do you have about this research?` 
+      }]);
+    } catch (err) {
+      setMessages(prev => [...prev, { role: 'assistant', text: `⚠️ Error during upload: ${err.message}` }]);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = null; // Clear the input box
+    }
+  };
 
   const handleSend = async () => {
     if (!input.trim()) return;
     
-    // Optimistic UI update
     const userMsg = input.trim();
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setInput('');
     setLoading(true);
 
     try {
-      // Connect specifically to our robust FastAPI Python backend!
       const res = await fetch("http://127.0.0.1:8000/api/chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          query: userMsg,
-          chat_history: chatHistoryStr
-        })
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: userMsg, chat_history: chatHistoryStr })
       });
 
       if (!res.ok) throw new Error("Our backend server rejected the query.");
@@ -47,9 +77,7 @@ function App() {
         sources: data.sources 
       }]);
 
-      // Update the invisible conversation memory for the backend LLM Context payload
       setChatHistoryStr(prev => prev + `User: ${userMsg}\nAI: ${data.answer}\n`);
-
     } catch (err) {
       setMessages(prev => [...prev, { role: 'assistant', text: `⚠️ API Error (Is your FastAPI server running?): ${err.message}` }]);
     } finally {
@@ -66,7 +94,6 @@ function App() {
 
   return (
     <div className="app-container">
-      {/* 🚀 Dynamic Gradient Backgrounds */}
       <div className="blob blob-1"></div>
       <div className="blob blob-2"></div>
 
@@ -74,6 +101,24 @@ function App() {
         <header className="chat-header">
           <h1>📚 GenAI Research Assistant</h1>
           <p>Powered by FastAPI, LangChain, and Meta Llama 3</p>
+          
+          {/* Dynamic File Upload Button */}
+          <div className="upload-container">
+            <input 
+               type="file" 
+               accept="application/pdf"
+               ref={fileInputRef}
+               style={{ display: 'none' }}
+               onChange={handleFileUpload}
+            />
+            <button 
+              className="upload-btn" 
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+            >
+              {uploading ? "⏳ Training AI on new PDF..." : "➕ Upload Dynamic PDF to AI Brain"}
+            </button>
+          </div>
         </header>
 
         <div className="messages-container">
@@ -82,7 +127,6 @@ function App() {
               <div className={`message-bubble ${msg.role}`}>
                 <p>{msg.text}</p>
                 
-                {/* 📄 Render Expandable Citations for Academic Fact-Checking */}
                 {msg.sources && msg.sources.length > 0 && (
                   <details className="citation-box">
                     <summary>📄 View Source Citations</summary>
