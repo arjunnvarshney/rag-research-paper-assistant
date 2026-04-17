@@ -449,7 +449,80 @@ body {
   background: rgba(255, 255, 255, 0.15);
 }
 
-/* Suggested Predictive Copilot Chips */
+/* Dev Analytics Sidebar Overlay */
+.dev-sidebar {
+  position: absolute;
+  top: 20%;
+  left: -400px;
+  width: 320px;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(25px);
+  padding: 30px;
+  border-radius: 0 24px 24px 0;
+  border-left: none;
+  z-index: 1000;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 20px 0 50px rgba(0,0,0,0.5);
+  color: white;
+}
+
+.dev-sidebar.open {
+  left: 0;
+}
+
+.dev-sidebar h3 {
+  color: var(--accent);
+  margin-bottom: 20px;
+  font-size: 1.2rem;
+}
+
+.dev-sidebar ul {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.dev-sidebar li {
+  font-size: 0.9rem;
+  color: rgba(255,255,255,0.8);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  padding-bottom: 10px;
+}
+
+.dev-sidebar li strong {
+  display: block;
+  color: var(--text-primary);
+  margin-bottom: 5px;
+}
+
+.dev-toggle-btn {
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  padding: 8px 15px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.3s ease;
+}
+
+.dev-toggle-btn:hover {
+  background: var(--accent);
+  color: white;
+}
+
+.lang-select {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--glass-border);
+  color: white;
+  padding: 8px 15px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  outline: none;
+  cursor: pointer;
+}
 .suggestion-chips {
   margin-top: 20px;
   display: flex;

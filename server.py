@@ -26,6 +26,9 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "faiss_index")
 DATASET_DIR = os.path.join(BASE_DIR, "dataset")
 
+import time
+START_TIME = time.time()
+
 # Global variables so that we can HOT-SWAP the brain when a new PDF is uploaded!
 global vector_store
 global rag_chain
@@ -42,6 +45,27 @@ except Exception as e:
 class ChatRequest(BaseModel):
     query: str
     chat_history: str = ""
+    language: str = "English"
+
+@app.get("/api/metrics")
+async def get_metrics():
+    global vector_store
+    uptime_seconds = int(time.time() - START_TIME)
+    
+    vec_count = 0
+    if vector_store and hasattr(vector_store, "index"):
+        vec_count = vector_store.index.ntotal
+        
+    pdf_count = 0
+    if os.path.exists(DATASET_DIR):
+        pdf_count = len([f for f in os.listdir(DATASET_DIR) if f.endswith(".pdf")])
+        
+    return {
+        "uptime": uptime_seconds,
+        "vectors": vec_count,
+        "pdfs": pdf_count,
+        "model": "Llama 3.1"
+    }
 
 @app.post("/api/upload")
 async def upload_document(file: UploadFile = File(...)):
@@ -98,8 +122,9 @@ async def chat_endpoint(request: ChatRequest):
         raise HTTPException(status_code=500, detail="The AI brain isn't initialized yet. Please upload a PDF first!")
     
     try:
-        # Secretly force the LLM to generate predicted follow-up queries!
-        augmented_query = request.query + "\n\n(IMPORTANT: At the very end of your answer, you MUST append the exact delimiter '|||' followed by exactly 3 short, intelligent suggested follow-up questions the user can ask next, separated by '|||'.)"
+        # Secretly force the LLM to generate predicted follow-up queries and Translate!
+        lang_instruction = f" You MUST translate your entire answer and output perfectly into {request.language}." if request.language != "English" else ""
+        augmented_query = request.query + f"\n\n(IMPORTANT:{lang_instruction} At the very end of your answer, regardless of language, you MUST append the exact delimiter '|||' followed by exactly 3 short, intelligent suggested follow-up questions the user can ask next in {request.language}, separated by '|||'.)"
         
         response = rag_chain.invoke({
             "input": augmented_query,
