@@ -202,7 +202,14 @@ async def wipe_memory():
         try:
             shutil.rmtree(DATASET_DIR)
         except Exception:
-            pass # Failsafe against write-locks
+            pass
+            
+    if os.path.exists(DB_PATH):
+        try:
+            shutil.rmtree(DB_PATH)
+        except Exception:
+            pass
+            
     return {"success": True, "message": "Memory Wiped"}
 
 if __name__ == "__main__":

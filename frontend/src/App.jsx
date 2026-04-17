@@ -178,7 +178,13 @@ function App() {
 
   const resetDashboard = async () => {
     if (!window.confirm("WARNING: This destroys the AI FAISS Math engine and deletes all cached Chat Sessions completely. Continue?")) return;
-    try { await fetch("http://localhost:8000/api/wipe", { method: "POST" }); } catch (e) { }
+    
+    try { 
+      const res = await fetch("http://localhost:8000/api/wipe", { method: "POST" });
+      if (!res.ok) alert("Backend Server error: You MUST restart your Python terminal server (Ctrl+C then python server.py) to enable the Wipe feature!");
+    } catch (e) {
+      alert("Network Error: Make sure your Python backend server is running.");
+    }
     
     localStorage.removeItem("rag_sessions");
     const blank = [{ id: Date.now(), name: "First Research", messages: [{ role: 'assistant', text: "Memory Professionally wiped! Ready."}] }];
