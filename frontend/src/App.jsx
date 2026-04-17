@@ -237,9 +237,9 @@ function App() {
       <div className="app-container login-screen">
         <div className="blob blob-1"></div><div className="blob blob-2"></div>
         <div className="glass-panel login-card">
-          <h2>🔐 Corporate AI Portal</h2>
-          <p>Please enter your Enterprise Security Key.</p>
-          <input type="password" className="login-input" placeholder="Admin Key" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && password === 'admin' ? setIsLoggedIn(true) : null} />
+          <h2>📚 GenAI Research Gateway</h2>
+          <p>Please enter your Authorized Researcher Key.</p>
+          <input type="password" className="login-input" placeholder="Researcher Key" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && password === 'admin' ? setIsLoggedIn(true) : null} />
           <button onClick={() => password === 'admin' ? setIsLoggedIn(true) : alert('Invalid')} className="send-btn login-btn" style={{marginBottom: "10px"}}>Access AI Brain</button>
           <button onClick={() => setIsLoggedIn(true)} className="action-btn login-btn">Access as Guest</button>
         </div>
