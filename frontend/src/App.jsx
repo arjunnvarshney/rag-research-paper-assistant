@@ -1,0 +1,133 @@
+import React, { useState, useRef, useEffect } from 'react';
+import './App.css';
+
+function App() {
+  const [messages, setMessages] = useState([
+    { role: 'assistant', text: 'Hello! I am your advanced Academic Assistant! I have securely parsed and modeled your Pdfs into our mathematical FAISS vector space. What would you like to ask?' }
+  ]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [chatHistoryStr, setChatHistoryStr] = useState('');
+  const endOfMessagesRef = useRef(null);
+
+  // Auto-scroll to the bottom of the chat when new messages appear
+  useEffect(() => {
+    endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, loading]);
+
+  const handleSend = async () => {
+    if (!input.trim()) return;
+    
+    // Optimistic UI update
+    const userMsg = input.trim();
+    setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
+    setInput('');
+    setLoading(true);
+
+    try {
+      // Connect specifically to our robust FastAPI Python backend!
+      const res = await fetch("http://127.0.0.1:8000/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          query: userMsg,
+          chat_history: chatHistoryStr
+        })
+      });
+
+      if (!res.ok) throw new Error("Our backend server rejected the query.");
+
+      const data = await res.json();
+      
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        text: data.answer,
+        sources: data.sources 
+      }]);
+
+      // Update the invisible conversation memory for the backend LLM Context payload
+      setChatHistoryStr(prev => prev + `User: ${userMsg}\nAI: ${data.answer}\n`);
+
+    } catch (err) {
+      setMessages(prev => [...prev, { role: 'assistant', text: `⚠️ API Error (Is your FastAPI server running?): ${err.message}` }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  }
+
+  return (
+    <div className="app-container">
+      {/* 🚀 Dynamic Gradient Backgrounds */}
+      <div className="blob blob-1"></div>
+      <div className="blob blob-2"></div>
+
+      <main className="glass-panel main-chat">
+        <header className="chat-header">
+          <h1>📚 GenAI Research Assistant</h1>
+          <p>Powered by FastAPI, LangChain, and Meta Llama 3</p>
+        </header>
+
+        <div className="messages-container">
+          {messages.map((msg, i) => (
+            <div key={i} className={`message-wrapper ${msg.role === 'user' ? 'align-right' : 'align-left'}`}>
+              <div className={`message-bubble ${msg.role}`}>
+                <p>{msg.text}</p>
+                
+                {/* 📄 Render Expandable Citations for Academic Fact-Checking */}
+                {msg.sources && msg.sources.length > 0 && (
+                  <details className="citation-box">
+                    <summary>📄 View Source Citations</summary>
+                    <div className="citation-content">
+                      {msg.sources.map((s, idx) => (
+                        <div key={idx} className="source-item">
+                          <strong>Source {idx + 1}: {s.source_file} (Page {s.page})</strong>
+                          <p className="source-snippet">"{s.page_content}"</p>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                )}
+              </div>
+            </div>
+          ))}
+          
+          {loading && (
+            <div className="message-wrapper align-left">
+              <div className="message-bubble assistant loading-indicator">
+                <span className="dot"></span>
+                <span className="dot"></span>
+                <span className="dot"></span>
+              </div>
+            </div>
+          )}
+          
+          <div ref={endOfMessagesRef} />
+        </div>
+
+        <div className="input-area">
+          <textarea 
+            placeholder="Ask a specific academic question based on your uploaded research..."
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            rows={1}
+          />
+          <button onClick={handleSend} disabled={!input.trim() || loading} className="send-btn">
+            {loading ? "..." : "Send"}
+          </button>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+export default App;
