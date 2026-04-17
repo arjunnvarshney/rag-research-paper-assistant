@@ -48,26 +48,69 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [password, setPassword] = useState('');
 
-  const [messages, setMessages] = useState([
-    { role: 'assistant', text: 'Hello! I am your advanced Academic Assistant. I have securely parsed and modeled your PDFs into our mathematical FAISS vector space.\n\nWhat would you like to ask?' }
-  ]);
+  // 📝 FEATURE: ChatGPT Session History Core Arrays
+  const [sessions, setSessions] = useState(() => {
+     const saved = localStorage.getItem("rag_sessions");
+     return saved ? JSON.parse(saved) : [{ id: 1, name: "New Chat", messages: [{ role: 'assistant', text: 'Hello! I am your advanced AI. Upload a PDF or ask a question!' }] }];
+  });
+  const [activeSessionId, setActiveSessionId] = useState(sessions[0].id);
+
+  // The active message screen array
+  const [messages, setMessages] = useState([]);
+  
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [chatHistoryStr, setChatHistoryStr] = useState('');
   
   const [uploading, setUploading] = useState(false);
   const [selectedPdfUrl, setSelectedPdfUrl] = useState(null);
-  
   const [isListening, setIsListening] = useState(false);
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-  // ENTERPRISE FEATURES: Language & Metrics
   const [targetLanguage, setTargetLanguage] = useState('English');
   const [metrics, setMetrics] = useState({ uptime: 0, vectors: 0, pdfs: 0, model: 'Llama 3.1' });
   const [showDevPanel, setShowDevPanel] = useState(false);
 
   const fileInputRef = useRef(null);
   const endOfMessagesRef = useRef(null);
+
+  // SYNC 1: Load active session messages into UI whenever session switches
+  useEffect(() => {
+     const sess = sessions.find(s => s.id === activeSessionId);
+     if (sess) {
+         setMessages(sess.messages);
+         // Build internal memory string for LangChain
+         let histStr = "";
+         sess.messages.forEach(m => histStr += `${m.role}: ${m.text}\n`);
+         setChatHistoryStr(histStr);
+     }
+  }, [activeSessionId]);
+
+  // SYNC 2: Write current UI messages back to localStorage and auto-name chat
+  useEffect(() => {
+      if (messages.length === 0) return;
+      setSessions(prev => {
+          const updated = prev.map(s => {
+              if (s.id === activeSessionId) {
+                  let name = s.name;
+                  if (name === "New Chat" && messages.length > 1) {
+                      const firstUser = messages.find(m => m.role === 'user');
+                      if (firstUser) name = firstUser.text.substring(0, 15) + "...";
+                  }
+                  return { ...s, name, messages };
+              }
+              return s;
+          });
+          localStorage.setItem("rag_sessions", JSON.stringify(updated));
+          return updated;
+      });
+  }, [messages, activeSessionId]);
+
+  const createNewChat = () => {
+      const newSess = { id: Date.now(), name: "New Chat", messages: [{ role: 'assistant', text: "Ready! Upload a new PDF or talk to the Agent." }] };
+      setSessions(prev => [newSess, ...prev]);
+      setActiveSessionId(newSess.id);
+  };
 
   useEffect(() => {
     endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -82,8 +125,8 @@ function App() {
           if (res.ok) setMetrics(data);
         } catch(e) {}
       };
-      pollMetrics(); // initial ping
-      const interval = setInterval(pollMetrics, 5000); // 5 sec live tracking
+      pollMetrics();
+      const interval = setInterval(pollMetrics, 5000);
       return () => clearInterval(interval);
     }
   }, [isLoggedIn]);
@@ -93,12 +136,9 @@ function App() {
       window.speechSynthesis.cancel();
       const msg = new SpeechSynthesisUtterance();
       msg.text = text.replace(/[*#]/g, '');
-      
-      // Auto-detect browser voice language mapping
       if(targetLanguage === "Spanish") msg.lang = 'es-ES';
       if(targetLanguage === "French") msg.lang = 'fr-FR';
       if(targetLanguage === "Hindi") msg.lang = 'hi-IN';
-      
       window.speechSynthesis.speak(msg);
     }
   };
@@ -108,7 +148,6 @@ function App() {
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
     recognition.interimResults = false;
-    // Map microphone to translation language
     if(targetLanguage === "Spanish") recognition.lang = 'es-ES';
     if(targetLanguage === "French") recognition.lang = 'fr-FR';
     
@@ -116,12 +155,11 @@ function App() {
     recognition.onresult = (e) => setInput(prev => prev + (prev.endsWith(' ') ? '' : ' ') + e.results[0][0].transcript);
     recognition.onerror = () => setIsListening(false);
     recognition.onend = () => setIsListening(false);
-    
     recognition.start();
   };
 
   const exportLog = () => {
-    let logText = "👨‍🔬 GenAI Academic Research Log\n===============================\n\n";
+    let logText = `👨‍🔬 GenAI Research Log (${sessions.find(s=>s.id===activeSessionId)?.name})\n===============================\n\n`;
     messages.forEach(m => { logText += `[${m.role.toUpperCase()}]:\n${m.text}\n\n--------------------\n`; });
     const blob = new Blob([logText], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
@@ -130,10 +168,14 @@ function App() {
   };
 
   const resetDashboard = async () => {
-    if (!window.confirm("Are you sure you want to securely wipe the AI's FAISS mathematical memory?")) return;
+    if (!window.confirm("WARNING: This destroys the AI FAISS Math engine and deletes all cached Chat Sessions completely. Continue?")) return;
     try { await fetch("http://localhost:8000/api/wipe", { method: "POST" }); } catch (e) { }
-    setMessages([{ role: 'assistant', text: '🧹 Memory professionally wiped. Starting a fresh research session! Please upload a new PDF.' }]);
-    setChatHistoryStr(''); setSelectedPdfUrl(null); setInput(''); setMetrics({ ...metrics, vectors: 0, pdfs: 0 });
+    
+    localStorage.removeItem("rag_sessions");
+    const blank = [{ id: Date.now(), name: "First Research", messages: [{ role: 'assistant', text: "Memory Professionally wiped! Ready."}] }];
+    setSessions(blank);
+    setActiveSessionId(blank[0].id);
+    setSelectedPdfUrl(null);
   };
 
   const handleFileUpload = async (e) => {
@@ -180,7 +222,6 @@ function App() {
       setMessages(prev => [...prev, { 
         role: 'assistant', text: data.answer, sources: data.sources, suggestions: data.suggestions
       }]);
-      setChatHistoryStr(prev => prev + `User: ${userMsg}\nAI: ${data.answer}\n`);
     } catch (err) {
       setMessages(prev => [...prev, { role: 'assistant', text: `⚠️ API Error: ${err.message}` }]);
     } finally { setLoading(false); }
@@ -209,23 +250,36 @@ function App() {
     <div className={`app-container ${selectedPdfUrl ? 'split-view' : ''}`}>
       <div className="blob blob-1"></div><div className="blob blob-2"></div>
 
-      {/* DEV ANALYTICS SIDEBAR OVERLAY */}
+      {/* CHATGPT STYLE SESSION SIDEBAR */}
+      <aside className="chat-history-sidebar glass-panel">
+         <button className="new-chat-btn" onClick={createNewChat}>➕ New Chat</button>
+         <p className="sidebar-title">Recent Threads</p>
+         <div className="sessions-list">
+            {sessions.map(s => (
+               <div key={s.id} className={`session-item ${s.id === activeSessionId ? 'active' : ''}`} onClick={() => setActiveSessionId(s.id)}>
+                   💬 {s.name}
+               </div>
+            ))}
+         </div>
+         <p className="sidebar-footer">Powered by FAISS RAG</p>
+      </aside>
+
+      {/* LIVE ADMIN DEV PANEL */}
       <div className={`dev-sidebar glass-panel ${showDevPanel ? 'open' : ''}`}>
          <h3>📊 Live AI Metrics</h3>
          <ul>
             <li><strong>Engine:</strong> {metrics.model}</li>
-            <li><strong>Vector Dimensions:</strong> {metrics.vectors} mathematical chunks</li>
+            <li><strong>Vector Dims:</strong> {metrics.vectors} mathematical chunks</li>
             <li><strong>Memory Disks:</strong> {metrics.pdfs} Active PDFs</li>
-            <li><strong>Server Uptime:</strong> {metrics.uptime} seconds</li>
+            <li><strong>Uptime:</strong> {metrics.uptime} seconds</li>
             <li><strong>LLM Grounding:</strong> Strict RAG</li>
-            <li><strong>Web Fallback Agent:</strong> DuckDuckGo Router</li>
+            <li><strong>Web Fallback Agent:</strong> DuckDuckGo</li>
          </ul>
       </div>
 
       <main className="glass-panel main-chat">
         <header className="chat-header">
           <h1>📚 GenAI Research Assistant</h1>
-          <p>Powered by FastAPI, LangChain, and Meta Llama 3</p>
           
           <div className="action-bar header-tools">
             <button className="dev-toggle-btn" onClick={() => setShowDevPanel(!showDevPanel)}>
@@ -242,7 +296,7 @@ function App() {
 
           <div className="action-bar">
             <button className="action-btn" onClick={exportLog}>📥 Export Log</button>
-            <button className="action-btn danger-btn" onClick={resetDashboard}>🧠 Reset AI</button>
+            <button className="action-btn danger-btn" onClick={resetDashboard}>🧠 Wipe All</button>
 
             <div className="upload-container">
               <input type="file" accept="application/pdf" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileUpload} />
