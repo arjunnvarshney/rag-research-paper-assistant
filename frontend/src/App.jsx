@@ -3,26 +3,35 @@ import './App.css';
 
 const TypewriterMessage = ({ msgObj, onComplete }) => {
   const [displayedText, setDisplayedText] = useState("");
+  const typeRef = useRef(null);
   
   useEffect(() => {
-    let index = 0;
+    let currentText = "";
+    let i = 0;
+    
     setDisplayedText("");
+    
     const interval = setInterval(() => {
-       if (index < msgObj.text.length) {
-         setDisplayedText(prev => prev + msgObj.text.charAt(index));
-         index++;
+       if (i < msgObj.text.length) {
+         currentText += msgObj.text.charAt(i);
+         setDisplayedText(currentText);
+         
+         // 🧲 Fix downward screen bleed by forcing auto-scroll precisely as the text grows!
+         if(typeRef.current) typeRef.current.scrollIntoView({ behavior: "auto", block: "nearest" });
+         
+         i++;
        } else {
          clearInterval(interval);
          if (onComplete) onComplete();
        }
-    }, 10);
+    }, 15);
     return () => clearInterval(interval);
   }, [msgObj.text]);
 
   const isDone = displayedText.length === msgObj.text.length;
 
   return (
-    <>
+    <div ref={typeRef}>
        <p style={{ whiteSpace: "pre-wrap" }}>
          {displayedText}{(displayedText.length < msgObj.text.length) ? " █" : ""}
        </p>
@@ -40,7 +49,7 @@ const TypewriterMessage = ({ msgObj, onComplete }) => {
            </div>
          </details>
        )}
-    </>
+    </div>
   );
 };
 
