@@ -240,7 +240,8 @@ function App() {
           <h2>🔐 Corporate AI Portal</h2>
           <p>Please enter your Enterprise Security Key.</p>
           <input type="password" className="login-input" placeholder="Admin Key" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && password === 'admin' ? setIsLoggedIn(true) : null} />
-          <button onClick={() => password === 'admin' ? setIsLoggedIn(true) : alert('Invalid')} className="send-btn login-btn">Access AI Brain</button>
+          <button onClick={() => password === 'admin' ? setIsLoggedIn(true) : alert('Invalid')} className="send-btn login-btn" style={{marginBottom: "10px"}}>Access AI Brain</button>
+          <button onClick={() => setIsLoggedIn(true)} className="action-btn login-btn">Access as Guest</button>
         </div>
       </div>
     );
