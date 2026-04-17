@@ -246,8 +246,9 @@ function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query: userMsg, chat_history: chatHistoryStr, language: targetLanguage, search_mode: searchMode })
       });
-      if (!res.ok) throw new Error("Our backend server rejected the query.");
+      
       const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Our backend server rejected the query.");
       
       setMessages(prev => [...prev, { 
         role: 'assistant', text: data.answer, sources: data.sources, suggestions: data.suggestions

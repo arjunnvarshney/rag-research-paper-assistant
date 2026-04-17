@@ -126,8 +126,12 @@ async def chat_endpoint(request: ChatRequest):
         
         # 🌐 EXPLICIT WEB SEARCH AGENT MODE OVERRIDE
         if hasattr(request, 'search_mode') and request.search_mode == 'web':
-            search = DuckDuckGoSearchRun()
-            web_results = search.run(request.query)
+            try:
+                search = DuckDuckGoSearchRun()
+                web_results = search.run(request.query)
+            except Exception as e:
+                web_results = f"DuckDuckGo Search Engine blocked the request (Rate Limit / Connection Error). Unable to fetch live data. Error trace: {str(e)}"
+                
             llm = ChatGroq(temperature=0.4, model_name="llama-3.1-8b-instant")
             
             lang_instruction = f" You MUST translate your entire answer and output perfectly into {request.language}." if request.language != "English" else ""
