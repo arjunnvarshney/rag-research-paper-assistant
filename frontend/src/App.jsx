@@ -2,6 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
 
 function App() {
+  // Security Authentication State
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [password, setPassword] = useState('');
+
   const [messages, setMessages] = useState([
     { role: 'assistant', text: 'Hello! I am your advanced Academic Assistant! I have securely parsed and modeled your Pdfs into our mathematical FAISS vector space. What would you like to ask?' }
   ]);
@@ -9,7 +13,6 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [chatHistoryStr, setChatHistoryStr] = useState('');
   
-  // File Upload and PDF visual viewer states
   const [uploading, setUploading] = useState(false);
   const [selectedPdfUrl, setSelectedPdfUrl] = useState(null);
   const fileInputRef = useRef(null);
@@ -19,29 +22,37 @@ function App() {
     endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading, uploading]);
 
-  // Handle Dynamic PDF Upload
+  // Voice Interaction - Next-Gen feature
+  const handleSpeak = (text) => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const msg = new SpeechSynthesisUtterance();
+      // Remove generic markdown symbols from speech
+      msg.text = text.replace(/[*#]/g, '');
+      window.speechSynthesis.speak(msg);
+    } else {
+      alert("Your browser does not support AI Voice Synthesis.");
+    }
+  };
+
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     
-    // Generate an instant visual browser URL for the embedded iframe
     const instantVisualUrl = URL.createObjectURL(file);
     setSelectedPdfUrl(instantVisualUrl);
 
     setUploading(true);
-    // Optimistically tell user what's happening
     setMessages(prev => [...prev, { role: 'assistant', text: `⏳ Uploading and deeply analyzing '${file.name}'... The AI is mathematically processing the document now.` }]);
 
     const formData = new FormData();
     formData.append('file', file);
 
     try {
-      // Stream the PDF to Python Backend
       const res = await fetch("http://127.0.0.1:8000/api/upload", {
         method: "POST",
         body: formData
       });
-      
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Upload failed");
       
@@ -51,10 +62,10 @@ function App() {
       }]);
     } catch (err) {
       setMessages(prev => [...prev, { role: 'assistant', text: `⚠️ Error during upload: ${err.message}` }]);
-      setSelectedPdfUrl(null); // Remove viewer on failure
+      setSelectedPdfUrl(null);
     } finally {
       setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = null; // Clear the input box
+      if (fileInputRef.current) fileInputRef.current.value = null;
     }
   };
 
@@ -98,6 +109,35 @@ function App() {
     }
   }
 
+  // 1. Authorized Auth Portal View
+  if (!isLoggedIn) {
+    return (
+      <div className="app-container login-screen">
+        <div className="blob blob-1"></div>
+        <div className="blob blob-2"></div>
+        <div className="glass-panel login-card">
+          <h2>🔐 Authorized Access Only</h2>
+          <p>Please log in to your Academic Dashboard.</p>
+          <input 
+             type="password" 
+             className="login-input"
+             placeholder="Enter Security Key (Hint: admin)" 
+             value={password}
+             onChange={(e) => setPassword(e.target.value)}
+             onKeyDown={(e) => e.key === 'Enter' && password === 'admin' ? setIsLoggedIn(true) : null}
+          />
+          <button 
+             onClick={() => password === 'admin' ? setIsLoggedIn(true) : alert('Invalid Security Key!')} 
+             className="send-btn login-btn"
+          >
+             Access AI Portal
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Main Verified PDF Portal View
   return (
     <div className={`app-container ${selectedPdfUrl ? 'split-view' : ''}`}>
       <div className="blob blob-1"></div>
@@ -132,6 +172,10 @@ function App() {
               <div className={`message-bubble ${msg.role}`}>
                 <p>{msg.text}</p>
                 
+                {msg.role === 'assistant' && (
+                  <button className="voice-btn" onClick={() => handleSpeak(msg.text)}>🔊 Read Aloud</button>
+                )}
+
                 {msg.sources && msg.sources.length > 0 && (
                   <details className="citation-box">
                     <summary>📄 View Source Citations</summary>
@@ -176,7 +220,6 @@ function App() {
         </div>
       </main>
 
-      {/* 📄 NEW: Dual-Pane Embedded PDF Viewer */}
       {selectedPdfUrl && (
         <aside className="pdf-viewer-pane">
            <iframe src={selectedPdfUrl} title="PDF Viewer" width="100%" height="100%" frameBorder="0" />

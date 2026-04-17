@@ -103,16 +103,48 @@ async def chat_endpoint(request: ChatRequest):
             "chat_history": request.chat_history
         })
         
+        answer = response["answer"]
         sources = []
-        for doc in response["context"]:
-            sources.append({
-                "page_content": doc.page_content[:400] + "...", 
-                "source_file": doc.metadata.get("source_file", "Unknown Document"),
-                "page": doc.metadata.get("page", "?")
-            })
+        
+        # 🌐 AGENTIC HYBRID RAG: Live Internet Web Search Fallback!
+        if "don't know" in answer.lower() or "not present in the context" in answer.lower():
+            try:
+                from langchain_community.tools import DuckDuckGoSearchRun
+                from langchain_groq import ChatGroq
+                from langchain_core.prompts import PromptTemplate
+                
+                # Fetch live data autonomously
+                search = DuckDuckGoSearchRun()
+                web_results = search.run(request.query)
+                
+                # Resynthesize web data through Llama 3
+                llm = ChatGroq(temperature=0.4, model_name="llama-3.1-8b-instant")
+                fallback_prompt = PromptTemplate.from_template(
+                    "You are a helpful AI assistant. The user asked: '{query}'. Provide a highly accurate, brief answer using strictly this live internet data: {web_data}"
+                )
+                fallback_chain = fallback_prompt | llm
+                fallback_ans = fallback_chain.invoke({"query": request.query, "web_data": web_results[:3000]})
+                
+                answer = "🌐 *Web Search Fallback Triggered*\n\n" + fallback_ans.content
+                sources.append({
+                    "page_content": web_results[:400] + "...", 
+                    "source_file": "Live Internet (DuckDuckGo Engine)", 
+                    "page": "Web Search"
+                })
+            except Exception as e:
+                # If internet crashes, default to simple failure safely
+                pass
+        else:
+            # 📄 Traditional Document Citations
+            for doc in response["context"]:
+                sources.append({
+                    "page_content": doc.page_content[:400] + "...", 
+                    "source_file": doc.metadata.get("source_file", "Unknown Document"),
+                    "page": doc.metadata.get("page", "?")
+                })
             
         return {
-            "answer": response["answer"],
+            "answer": answer,
             "sources": sources
         }
     except Exception as e:
