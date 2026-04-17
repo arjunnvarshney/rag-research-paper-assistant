@@ -1,6 +1,6 @@
 import os
 import shutil
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -46,6 +46,7 @@ class ChatRequest(BaseModel):
     query: str
     chat_history: str = ""
     language: str = "English"
+    search_mode: str = "pdf" # 'pdf' or 'web'
 
 @app.get("/api/metrics")
 async def get_metrics():
@@ -118,10 +119,39 @@ async def upload_document(file: UploadFile = File(...)):
 
 @app.post("/api/chat")
 async def chat_endpoint(request: ChatRequest):
-    if not rag_chain:
-        raise HTTPException(status_code=500, detail="The AI brain isn't initialized yet. Please upload a PDF first!")
-    
     try:
+        from langchain_community.tools import DuckDuckGoSearchRun
+        from langchain_groq import ChatGroq
+        from langchain_core.prompts import PromptTemplate
+        
+        # 🌐 EXPLICIT WEB SEARCH AGENT MODE OVERRIDE
+        if hasattr(request, 'search_mode') and request.search_mode == 'web':
+            search = DuckDuckGoSearchRun()
+            web_results = search.run(request.query)
+            llm = ChatGroq(temperature=0.4, model_name="llama-3.1-8b-instant")
+            
+            lang_instruction = f" You MUST translate your entire answer and output perfectly into {request.language}." if request.language != "English" else ""
+            fallback_prompt = PromptTemplate.from_template(
+                "You are an AI Web Engine. The user asked: '{query}'. Answer carefully relying ONLY on this real-time scraped web data: {web_data}\n\n(IMPORTANT:{lang_instruction} After your answer, append '|||' and 3 short follow-up questions separated by '|||'.)"
+            )
+            fallback_ans = (fallback_prompt | llm).invoke({"query": request.query, "web_data": web_results[:3000]})
+            
+            answer = "🌐 *Explicit Web Search Mode Triggered*\n\n"
+            suggestions = []
+            if "|||" in fallback_ans.content:
+                f_parts = fallback_ans.content.split("|||")
+                answer += f_parts[0].strip()
+                suggestions = [p.strip() for p in f_parts[1:] if p.strip()][:3]
+            else:
+                answer += fallback_ans.content
+                
+            sources = [{"page_content": web_results[:400] + "...", "source_file": "DuckDuckGo Web Scraper Engine", "page": "Live Internet Data"}]
+            return {"answer": answer, "sources": sources, "suggestions": suggestions}
+
+        # 📄 STANDARD MULTI-MODAL FAISS PIPELINE
+        if not rag_chain:
+            raise HTTPException(status_code=500, detail="The AI brain isn't initialized yet. Please upload a PDF or YouTube link first!")
+    
         # Secretly force the LLM to generate predicted follow-up queries and Translate!
         lang_instruction = f" You MUST translate your entire answer and output perfectly into {request.language}." if request.language != "English" else ""
         augmented_query = request.query + f"\n\n(IMPORTANT:{lang_instruction} At the very end of your answer, regardless of language, you MUST append the exact delimiter '|||' followed by exactly 3 short, intelligent suggested follow-up questions the user can ask next in {request.language}, separated by '|||'.)"
@@ -146,10 +176,6 @@ async def chat_endpoint(request: ChatRequest):
         # 🌐 AGENTIC HYBRID RAG: Live Internet Web Search Fallback!
         if "don't know" in answer.lower() or "not present in the context" in answer.lower():
             try:
-                from langchain_community.tools import DuckDuckGoSearchRun
-                from langchain_groq import ChatGroq
-                from langchain_core.prompts import PromptTemplate
-                
                 search = DuckDuckGoSearchRun()
                 web_results = search.run(request.query)
                 
@@ -188,6 +214,43 @@ async def chat_endpoint(request: ChatRequest):
             "sources": sources,
             "suggestions": suggestions
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/youtube")
+async def upload_youtube(link: str = Form(...)):
+    global vector_store, rag_chain
+    try:
+        from youtube_transcript_api import YouTubeTranscriptApi
+        from langchain.schema import Document
+        from langchain.text_splitter import RecursiveCharacterTextSplitter
+        from vector_store import get_embeddings
+        from langchain_community.vectorstores import FAISS
+        
+        if "v=" in link:
+            video_id = link.split("v=")[1].split("&")[0]
+        elif "youtu.be/" in link:
+            video_id = link.split("youtu.be/")[1].split("?")[0]
+        else:
+            raise Exception("Invalid YouTube URL")
+            
+        transcript = YouTubeTranscriptApi.get_transcript(video_id)
+        full_text = " ".join([t['text'] for t in transcript])
+        
+        docs = [Document(page_content=full_text, metadata={"source_file": f"YT Video (ID: {video_id})", "page": "Transcript"})]
+        
+        splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=150)
+        splits = splitter.split_documents(docs)
+        
+        if vector_store:
+            vector_store.add_documents(splits)
+        else:
+            vector_store = FAISS.from_documents(splits, get_embeddings())
+            
+        vector_store.save_local(DB_PATH)
+        rag_chain = create_rag_chain(vector_store)
+        
+        return {"success": True, "message": "YouTube Video dynamically vectorized and merged!"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

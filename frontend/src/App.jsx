@@ -16,9 +16,7 @@ const TypewriterMessage = ({ msgObj, onComplete }) => {
          currentText += msgObj.text.charAt(i);
          setDisplayedText(currentText);
          
-         // 🧲 Fix downward screen bleed by forcing auto-scroll precisely as the text grows!
          if(typeRef.current) typeRef.current.scrollIntoView({ behavior: "auto", block: "nearest" });
-         
          i++;
        } else {
          clearInterval(interval);
@@ -57,14 +55,11 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [password, setPassword] = useState('');
 
-  // 📝 FEATURE: ChatGPT Session History Core Arrays
   const [sessions, setSessions] = useState(() => {
      const saved = localStorage.getItem("rag_sessions");
      return saved ? JSON.parse(saved) : [{ id: 1, name: "New Chat", messages: [{ role: 'assistant', text: 'Hello! I am your advanced AI. Upload a PDF or ask a question!' }] }];
   });
   const [activeSessionId, setActiveSessionId] = useState(sessions[0].id);
-
-  // The active message screen array
   const [messages, setMessages] = useState([]);
   
   const [input, setInput] = useState('');
@@ -76,26 +71,27 @@ function App() {
   const [isListening, setIsListening] = useState(false);
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
+  // New Global App States
   const [targetLanguage, setTargetLanguage] = useState('English');
+  const [theme, setTheme] = useState('glass');
+  const [searchMode, setSearchMode] = useState('pdf');
+  
   const [metrics, setMetrics] = useState({ uptime: 0, vectors: 0, pdfs: 0, model: 'Llama 3.1' });
   const [showDevPanel, setShowDevPanel] = useState(false);
 
   const fileInputRef = useRef(null);
   const endOfMessagesRef = useRef(null);
 
-  // SYNC 1: Load active session messages into UI whenever session switches
   useEffect(() => {
      const sess = sessions.find(s => s.id === activeSessionId);
      if (sess) {
          setMessages(sess.messages);
-         // Build internal memory string for LangChain
          let histStr = "";
          sess.messages.forEach(m => histStr += `${m.role}: ${m.text}\n`);
          setChatHistoryStr(histStr);
      }
   }, [activeSessionId]);
 
-  // SYNC 2: Write current UI messages back to localStorage and auto-name chat
   useEffect(() => {
       if (messages.length === 0) return;
       setSessions(prev => {
@@ -121,9 +117,7 @@ function App() {
       setActiveSessionId(newSess.id);
   };
 
-  useEffect(() => {
-    endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, loading, uploading]);
+  useEffect(() => { endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, loading, uploading]);
 
   useEffect(() => {
     if (isLoggedIn) {
@@ -178,7 +172,6 @@ function App() {
 
   const resetDashboard = async () => {
     if (!window.confirm("WARNING: This destroys the AI FAISS Math engine and deletes all cached Chat Sessions completely. Continue?")) return;
-    
     try { 
       const res = await fetch("http://localhost:8000/api/wipe", { method: "POST" });
       if (!res.ok) alert("Backend Server error: You MUST restart your Python terminal server (Ctrl+C then python server.py) to enable the Wipe feature!");
@@ -191,6 +184,28 @@ function App() {
     setSessions(blank);
     setActiveSessionId(blank[0].id);
     setSelectedPdfUrl(null);
+  };
+
+  const ingestYouTube = async () => {
+    const link = prompt("Enter a standard YouTube URL (e.g. https://www.youtube.com/watch?v=...) to ingest its transcript into the AI FAISS Brain:");
+    if (!link) return;
+    
+    setUploading(true);
+    setMessages(prev => [...prev, { role: 'assistant', text: `⏳ Scraping mathematical transcript from YouTube Video and generating vector clusters...` }]);
+    
+    try {
+      const formData = new FormData();
+      formData.append("link", link);
+      const res = await fetch("http://localhost:8000/api/youtube", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail);
+      
+      setMessages(prev => [...prev, { role: 'assistant', text: `✅ Successfully multi-mapped YouTube Video into FAISS Vector Space! You can now cross-reference it with the PDFs.` }]);
+    } catch (err) {
+      setMessages(prev => [...prev, { role: 'assistant', text: `⚠️ Error during YouTube Ingestion: ${err.message}` }]);
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleFileUpload = async (e) => {
@@ -229,7 +244,7 @@ function App() {
       const res = await fetch("http://localhost:8000/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: userMsg, chat_history: chatHistoryStr, language: targetLanguage })
+        body: JSON.stringify({ query: userMsg, chat_history: chatHistoryStr, language: targetLanguage, search_mode: searchMode })
       });
       if (!res.ok) throw new Error("Our backend server rejected the query.");
       const data = await res.json();
@@ -244,12 +259,11 @@ function App() {
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
-  }
+  };
 
-  // ---------------- UI RENDERS ---------------- //
   if (!isLoggedIn) {
     return (
-      <div className="app-container login-screen">
+      <div className="app-container login-screen" data-theme={theme}>
         <div className="blob blob-1"></div><div className="blob blob-2"></div>
         <div className="glass-panel login-card">
           <h2>📚 GenAI Research Gateway</h2>
@@ -263,10 +277,9 @@ function App() {
   }
 
   return (
-    <div className={`app-container ${selectedPdfUrl ? 'split-view' : ''}`}>
+    <div className={`app-container ${selectedPdfUrl ? 'split-view' : ''}`} data-theme={theme}>
       <div className="blob blob-1"></div><div className="blob blob-2"></div>
 
-      {/* CHATGPT STYLE SESSION SIDEBAR */}
       <aside className="chat-history-sidebar glass-panel">
          <button className="new-chat-btn" onClick={createNewChat}>➕ New Chat</button>
          <p className="sidebar-title">Recent Threads</p>
@@ -280,15 +293,14 @@ function App() {
          <p className="sidebar-footer">Powered by FAISS RAG</p>
       </aside>
 
-      {/* LIVE ADMIN DEV PANEL */}
       <div className={`dev-sidebar glass-panel ${showDevPanel ? 'open' : ''}`}>
          <h3>📊 Live AI Metrics</h3>
          <ul>
             <li><strong>Engine:</strong> {metrics.model}</li>
-            <li><strong>Vector Dims:</strong> {metrics.vectors} mathematical chunks</li>
+            <li><strong>Vector Dims:</strong> {metrics.vectors} chunks</li>
             <li><strong>Memory Disks:</strong> {metrics.pdfs} Active PDFs</li>
             <li><strong>Uptime:</strong> {metrics.uptime} seconds</li>
-            <li><strong>LLM Grounding:</strong> Strict RAG</li>
+            <li><strong>LLM Grounding:</strong> RAG + YouTube</li>
             <li><strong>Web Fallback Agent:</strong> DuckDuckGo</li>
          </ul>
       </div>
@@ -299,24 +311,36 @@ function App() {
           
           <div className="action-bar header-tools">
             <button className="dev-toggle-btn" onClick={() => setShowDevPanel(!showDevPanel)}>
-              {showDevPanel ? "Close Analytics" : "⚙️ View Live Analytics"}
+              {showDevPanel ? "Close Analytics" : "⚙️ Diagnostics"}
             </button>
             <select className="lang-select" value={targetLanguage} onChange={(e) => setTargetLanguage(e.target.value)}>
                <option value="English">🇺🇸 English</option>
                <option value="Spanish">🇪🇸 Español</option>
                <option value="French">🇫🇷 Français</option>
                <option value="Hindi">🇮🇳 Hindi</option>
-               <option value="Japanese">🇯🇵 日本語</option>
+            </select>
+            <select className="lang-select" value={theme} onChange={(e) => setTheme(e.target.value)}>
+               <option value="glass">🌌 Glassmorphism</option>
+               <option value="oled">🌑 OLED Dark Mode</option>
+               <option value="clinical">☀️ Clinical White</option>
+            </select>
+            <select className="lang-select" style={{background: searchMode === 'web' ? 'rgba(56, 189, 248, 0.4)' : ''}} value={searchMode} onChange={(e) => setSearchMode(e.target.value)}>
+               <option value="pdf">📚 Search PDF Models</option>
+               <option value="web">🌐 Explicit Internet Search</option>
             </select>
           </div>
 
           <div className="action-bar">
             <button className="action-btn" onClick={exportLog}>📥 Export Log</button>
             <button className="action-btn danger-btn" onClick={resetDashboard}>🧠 Wipe All</button>
+            
+            <button className="action-btn" style={{color: '#f87171'}} onClick={ingestYouTube} disabled={uploading}>
+              {uploading ? "⏳ Analyzing..." : "▶️ Ingest YouTube Video"}
+            </button>
 
             <div className="upload-container">
               <input type="file" accept="application/pdf" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileUpload} />
-              <button className="upload-btn" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+              <button className="action-btn upload-btn" style={{color: '#60a5fa'}} onClick={() => fileInputRef.current?.click()} disabled={uploading}>
                 {uploading ? "⏳ Analyzing..." : "➕ Upload Dynamic PDF"}
               </button>
             </div>
@@ -362,7 +386,7 @@ function App() {
         </div>
 
         <div className="input-area">
-          <textarea placeholder={`Ask your AI directly in ${targetLanguage}...`} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} rows={1} />
+          <textarea placeholder={searchMode === 'web' ? 'Ask an open-ended Internet Question...' : `Ask your AI directly in ${targetLanguage}...`} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} rows={1} />
           <button onClick={toggleListening} className={`mic-btn ${isListening ? 'listening' : ''}`} title="Voice Dictation">🎤</button>
           <button onClick={() => handleSend(input)} disabled={!input.trim() || loading} className="send-btn">{loading ? "..." : "Send"}</button>
         </div>

@@ -11,6 +11,28 @@
   --accent: #60a5fa;
 }
 
+[data-theme='oled'] {
+  --bg-color: #000000;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --user-bubble: #1e1e1e;
+  --ai-bubble: rgba(15, 15, 15, 0.95);
+  --glass-bg: rgba(0, 0, 0, 0.95);
+  --glass-border: rgba(255, 255, 255, 0.05);
+  --accent: #eab308;
+}
+
+[data-theme='clinical'] {
+  --bg-color: #ffffff;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --user-bubble: #2563eb;
+  --ai-bubble: rgba(248, 250, 252, 0.9);
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(0, 0, 0, 0.1);
+  --accent: #3b82f6;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
