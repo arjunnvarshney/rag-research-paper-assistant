@@ -9,8 +9,9 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [chatHistoryStr, setChatHistoryStr] = useState('');
   
-  // File Upload states
+  // File Upload and PDF visual viewer states
   const [uploading, setUploading] = useState(false);
+  const [selectedPdfUrl, setSelectedPdfUrl] = useState(null);
   const fileInputRef = useRef(null);
   const endOfMessagesRef = useRef(null);
 
@@ -23,6 +24,10 @@ function App() {
     const file = e.target.files[0];
     if (!file) return;
     
+    // Generate an instant visual browser URL for the embedded iframe
+    const instantVisualUrl = URL.createObjectURL(file);
+    setSelectedPdfUrl(instantVisualUrl);
+
     setUploading(true);
     // Optimistically tell user what's happening
     setMessages(prev => [...prev, { role: 'assistant', text: `⏳ Uploading and deeply analyzing '${file.name}'... The AI is mathematically processing the document now.` }]);
@@ -46,6 +51,7 @@ function App() {
       }]);
     } catch (err) {
       setMessages(prev => [...prev, { role: 'assistant', text: `⚠️ Error during upload: ${err.message}` }]);
+      setSelectedPdfUrl(null); // Remove viewer on failure
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = null; // Clear the input box
@@ -93,7 +99,7 @@ function App() {
   }
 
   return (
-    <div className="app-container">
+    <div className={`app-container ${selectedPdfUrl ? 'split-view' : ''}`}>
       <div className="blob blob-1"></div>
       <div className="blob blob-2"></div>
 
@@ -102,7 +108,6 @@ function App() {
           <h1>📚 GenAI Research Assistant</h1>
           <p>Powered by FastAPI, LangChain, and Meta Llama 3</p>
           
-          {/* Dynamic File Upload Button */}
           <div className="upload-container">
             <input 
                type="file" 
@@ -170,6 +175,13 @@ function App() {
           </button>
         </div>
       </main>
+
+      {/* 📄 NEW: Dual-Pane Embedded PDF Viewer */}
+      {selectedPdfUrl && (
+        <aside className="pdf-viewer-pane">
+           <iframe src={selectedPdfUrl} title="PDF Viewer" width="100%" height="100%" frameBorder="0" />
+        </aside>
+      )}
     </div>
   );
 }
