@@ -318,6 +318,49 @@ async def scrape_website(link: str = Form(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/vision")
+async def process_vision(image: UploadFile = File(...), query: str = Form("Analyze this image and explain any math, charts, or diagrams in extreme detail.")):
+    try:
+        import base64
+        import requests
+        import os
+        
+        contents = await image.read()
+        base64_image = base64.b64encode(contents).decode('utf-8')
+        
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            raise Exception("GROQ_API_KEY missing")
+            
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "model": "llama-3.2-11b-vision-preview",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": query},
+                        {"type": "image_url", "image_url": {"url": f"data:{image.content_type};base64,{base64_image}"}}
+                    ]
+                }
+            ],
+            "temperature": 0.4
+        }
+        
+        res = requests.post("https://api.groq.com/openai/v1/chat/completions", json=payload, headers=headers, timeout=60)
+        data = res.json()
+        if res.status_code != 200:
+            raise Exception(data.get("error", {}).get("message", "Vision API failed"))
+            
+        answer = data["choices"][0]["message"]["content"]
+        return {"answer": answer}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/api/title")
 async def generate_title(request: TitleRequest):
     try:

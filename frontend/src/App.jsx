@@ -84,6 +84,7 @@ function App() {
   const [showDevPanel, setShowDevPanel] = useState(false);
 
   const fileInputRef = useRef(null);
+  const imageInputRef = useRef(null);
   const endOfMessagesRef = useRef(null);
 
   useEffect(() => {
@@ -241,6 +242,30 @@ function App() {
     }
   };
 
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const imgUrl = URL.createObjectURL(file);
+    setMessages(prev => [...prev, { role: 'user', text: "Please analyze this complex chart/diagram in extreme detail.", image: imgUrl }]);
+    setLoading(true);
+
+    const formData = new FormData(); 
+    formData.append('image', file);
+    try {
+      const res = await fetch("http://localhost:8000/api/vision", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Vision inference failed.");
+      
+      setMessages(prev => [...prev, { role: 'assistant', text: `👁️ **Vision Protocol Analysis:**\n\n${data.answer}` }]);
+    } catch (err) {
+      setMessages(prev => [...prev, { role: 'assistant', text: `⚠️ Vision Error: ${err.message}` }]);
+    } finally {
+      setLoading(false);
+      if (imageInputRef.current) imageInputRef.current.value = null;
+    }
+  };
+
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -385,6 +410,11 @@ function App() {
               {uploading ? "⏳..." : "🔗 Web Link"}
             </button>
 
+            <input type="file" accept="image/*" ref={imageInputRef} style={{ display: 'none' }} onChange={handleImageUpload} />
+            <button className="action-btn" style={{color: '#c084fc'}} onClick={() => imageInputRef.current?.click()} disabled={uploading || loading}>
+              {loading ? "⏳..." : "📸 Analyze Chart"}
+            </button>
+
             <div className="upload-container">
               <input type="file" accept="application/pdf" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileUpload} />
               <button className="action-btn upload-btn" style={{color: '#60a5fa'}} onClick={() => fileInputRef.current?.click()} disabled={uploading}>
@@ -404,7 +434,10 @@ function App() {
                        if (handsFreeRef.current) handleSpeak(msg.text); // Autonomous Loop: Typewriter done -> Instantly read aloud
                    }} />
                  ) : (
-                   <p style={{ whiteSpace: "pre-wrap" }}>{msg.text}</p>
+                   <>
+                     {msg.image && <img src={msg.image} alt="Upload" style={{maxWidth: '100%', borderRadius: '10px', display: 'block', marginBottom: '10px'}} />}
+                     <p style={{ whiteSpace: "pre-wrap" }}>{msg.text}</p>
+                   </>
                  )}
                 
                  {msg.role === 'assistant' && (
