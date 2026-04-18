@@ -53,13 +53,11 @@ const TypewriterMessage = ({ msgObj, onComplete }) => {
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [password, setPassword] = useState('');
 
-  const [sessions, setSessions] = useState(() => {
-     const saved = localStorage.getItem("rag_sessions");
-     return saved ? JSON.parse(saved) : [{ id: 1, name: "New Chat", messages: [{ role: 'assistant', text: 'Hello! I am your advanced AI. Upload a PDF or ask a question!' }] }];
-  });
-  const [activeSessionId, setActiveSessionId] = useState(sessions[0].id);
+  const [sessions, setSessions] = useState([{ id: 1, name: "New Chat", messages: [] }]);
+  const [activeSessionId, setActiveSessionId] = useState(1);
   const [messages, setMessages] = useState([]);
   
   const [input, setInput] = useState('');
@@ -87,18 +85,32 @@ function App() {
   const imageInputRef = useRef(null);
   const endOfMessagesRef = useRef(null);
 
+  const handleLogin = (asAdmin) => {
+      setIsAdmin(asAdmin);
+      setIsLoggedIn(true);
+      const key = asAdmin ? "rag_admin_sessions" : "rag_guest_sessions";
+      const saved = localStorage.getItem(key);
+      let initial = saved ? JSON.parse(saved) : null;
+      if (!initial || initial.length === 0) {
+          initial = [{ id: Date.now(), name: "First Chat", messages: [{ role: 'assistant', text: asAdmin ? 'Welcome back, Admin. All systems are online.' : 'Welcome Guest. How can I help you today?' }] }];
+      }
+      setSessions(initial);
+      setActiveSessionId(initial[0].id);
+  };
+
   useEffect(() => {
-     const sess = sessions.find(s => s.id === activeSessionId);
+     if (sessions.length === 0) return;
+     const sess = sessions.find(s => s.id === activeSessionId) || sessions[0];
      if (sess) {
          setMessages(sess.messages);
          let histStr = "";
          sess.messages.forEach(m => histStr += `${m.role}: ${m.text}\n`);
          setChatHistoryStr(histStr);
      }
-  }, [activeSessionId]);
+  }, [activeSessionId, sessions]);
 
   useEffect(() => {
-      if (messages.length === 0) return;
+      if (!isLoggedIn || messages.length === 0) return;
       setSessions(prev => {
           const updated = prev.map(s => {
               if (s.id === activeSessionId) {
@@ -106,10 +118,11 @@ function App() {
               }
               return s;
           });
-          localStorage.setItem("rag_sessions", JSON.stringify(updated));
+          const key = isAdmin ? "rag_admin_sessions" : "rag_guest_sessions";
+          localStorage.setItem(key, JSON.stringify(updated));
           return updated;
       });
-  }, [messages, activeSessionId]);
+  }, [messages, activeSessionId, isLoggedIn, isAdmin]);
 
   const createNewChat = () => {
       const newSess = { id: Date.now(), name: "New Chat", messages: [{ role: 'assistant', text: "Ready! Upload a new PDF or talk to the Agent." }] };
@@ -191,7 +204,8 @@ function App() {
       alert("Network Error: Make sure your Python backend server is running.");
     }
     
-    localStorage.removeItem("rag_sessions");
+    const key = isAdmin ? "rag_admin_sessions" : "rag_guest_sessions";
+    localStorage.removeItem(key);
     const blank = [{ id: Date.now(), name: "First Research", messages: [{ role: 'assistant', text: "Memory Professionally wiped! Ready."}] }];
     setSessions(blank);
     setActiveSessionId(blank[0].id);
@@ -336,9 +350,9 @@ function App() {
         <div className="glass-panel login-card">
           <h2>📚 GenAI Research Gateway</h2>
           <p>Please enter your Authorized Researcher Key.</p>
-          <input type="password" className="login-input" placeholder="Researcher Key" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && password === 'admin' ? setIsLoggedIn(true) : null} />
-          <button onClick={() => password === 'admin' ? setIsLoggedIn(true) : alert('Invalid')} className="send-btn login-btn" style={{marginBottom: "10px"}}>Access AI Brain</button>
-          <button onClick={() => setIsLoggedIn(true)} className="action-btn login-btn">Access as Guest</button>
+          <input type="password" className="login-input" placeholder="Researcher Key" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && password === 'admin' ? handleLogin(true) : null} />
+          <button onClick={() => password === 'admin' ? handleLogin(true) : alert('Invalid')} className="send-btn login-btn" style={{marginBottom: "10px"}}>Access AI Brain</button>
+          <button onClick={() => handleLogin(false)} className="action-btn login-btn">Access as Guest</button>
         </div>
       </div>
     );
@@ -394,33 +408,34 @@ function App() {
             </select>
             <select className="lang-select" style={{background: searchMode === 'web' ? 'rgba(56, 189, 248, 0.4)' : ''}} value={searchMode} onChange={(e) => setSearchMode(e.target.value)}>
                <option value="pdf">📚 Search PDF Models</option>
-               <option value="web">🌐 Explicit Internet Search</option>
+               {isAdmin && <option value="web">🌐 Explicit Internet Search</option>}
             </select>
           </div>
 
           <div className="action-bar">
+            {isAdmin && <button className="action-btn danger-btn" onClick={resetDashboard}>🧠 Wipe All</button>}
             <button className="action-btn" onClick={exportLog}>📥 Export Log</button>
-            <button className="action-btn danger-btn" onClick={resetDashboard}>🧠 Wipe All</button>
             
-            <button className="action-btn" style={{color: '#f87171'}} onClick={ingestYouTube} disabled={uploading}>
-              {uploading ? "⏳..." : "▶️ YouTube"}
-            </button>
-
-            <button className="action-btn" style={{color: '#34d399'}} onClick={ingestWebsite} disabled={uploading}>
-              {uploading ? "⏳..." : "🔗 Web Link"}
-            </button>
-
-            <input type="file" accept="image/*" ref={imageInputRef} style={{ display: 'none' }} onChange={handleImageUpload} />
-            <button className="action-btn" style={{color: '#c084fc'}} onClick={() => imageInputRef.current?.click()} disabled={uploading || loading}>
-              {loading ? "⏳..." : "📸 Analyze Chart"}
-            </button>
-
-            <div className="upload-container">
-              <input type="file" accept="application/pdf" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileUpload} />
-              <button className="action-btn upload-btn" style={{color: '#60a5fa'}} onClick={() => fileInputRef.current?.click()} disabled={uploading}>
-                {uploading ? "⏳ Analyzing..." : "➕ Upload Dynamic PDF"}
-              </button>
-            </div>
+            {isAdmin && (
+              <>
+                <button className="action-btn" style={{color: '#f87171'}} onClick={ingestYouTube} disabled={uploading}>
+                  {uploading ? "⏳..." : "▶️ YouTube"}
+                </button>
+                <button className="action-btn" style={{color: '#34d399'}} onClick={ingestWebsite} disabled={uploading}>
+                  {uploading ? "⏳..." : "🔗 Web Link"}
+                </button>
+                <input type="file" accept="image/*" ref={imageInputRef} style={{ display: 'none' }} onChange={handleImageUpload} />
+                <button className="action-btn" style={{color: '#c084fc'}} onClick={() => imageInputRef.current?.click()} disabled={uploading || loading}>
+                  {loading ? "⏳..." : "📸 Analyze Chart"}
+                </button>
+                <div className="upload-container">
+                  <input type="file" accept="application/pdf" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileUpload} />
+                  <button className="action-btn upload-btn" style={{color: '#60a5fa'}} onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+                    {uploading ? "⏳ Analyzing..." : "➕ Upload Dynamic PDF"}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </header>
 
