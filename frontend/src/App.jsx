@@ -411,8 +411,8 @@ function App() {
              const val = !handsFreeMode;
              setHandsFreeMode(val); handsFreeRef.current = val;
              if(val) toggleListening(); else window.speechSynthesis.cancel();
-          }} className={`mic-btn ${handsFreeMode ? 'listening' : ''}`} style={{ width: 'auto', padding: '0 15px', borderRadius: '15px' }} title="Hands-Free Autopilot">
-             {handsFreeMode ? "🛑 Auto-Pilot ON" : "🤖 Auto-Pilot OFF"}
+          }} className={`mic-btn ${handsFreeMode ? 'listening' : ''}`} style={{ width: 'auto', padding: '0 15px', borderRadius: '15px' }} title="Continuous Conversation">
+             {handsFreeMode ? "🛑 End Voice Mode" : "🎙️ Advanced Voice Mode"}
           </button>
           
           <button onClick={toggleListening} className={`mic-btn ${isListening && !handsFreeMode ? 'listening' : ''}`} title="Voice Dictation">🎤</button>
