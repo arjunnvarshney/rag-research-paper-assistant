@@ -232,7 +232,7 @@ async def process_youtube(link: str = Form(...)):
         import urllib.parse as urlparse
         from langchain_core.documents import Document
         from langchain_text_splitters import RecursiveCharacterTextSplitter
-        from vector_store import get_embeddings
+        from langchain_huggingface import HuggingFaceEmbeddings
         from langchain_community.vectorstores import FAISS
         
         if "v=" in link:
@@ -250,10 +250,13 @@ async def process_youtube(link: str = Form(...)):
         splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=150)
         splits = splitter.split_documents(docs)
         
+        
+        embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+        
         if vector_store:
             vector_store.add_documents(splits)
         else:
-            vector_store = FAISS.from_documents(splits, get_embeddings())
+            vector_store = FAISS.from_documents(splits, embeddings)
             
         vector_store.save_local(DB_PATH)
         rag_chain = create_rag_chain(vector_store)
@@ -291,7 +294,7 @@ async def scrape_website(link: str = Form(...)):
         from bs4 import BeautifulSoup
         from langchain_core.documents import Document
         from langchain_text_splitters import RecursiveCharacterTextSplitter
-        from vector_store import get_embeddings
+        from langchain_huggingface import HuggingFaceEmbeddings
         from langchain_community.vectorstores import FAISS
         
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
@@ -307,10 +310,12 @@ async def scrape_website(link: str = Form(...)):
         splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=150)
         splits = splitter.split_documents(docs)
         
+        embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+        
         if vector_store:
             vector_store.add_documents(splits)
         else:
-            vector_store = FAISS.from_documents(splits, get_embeddings())
+            vector_store = FAISS.from_documents(splits, embeddings)
             
         vector_store.save_local(DB_PATH)
         rag_chain = create_rag_chain(vector_store)
