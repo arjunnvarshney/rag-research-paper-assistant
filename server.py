@@ -225,11 +225,12 @@ async def chat_endpoint(request: ChatRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/youtube")
-async def upload_youtube(link: str = Form(...)):
+async def process_youtube(link: str = Form(...)):
     global vector_store, rag_chain
     try:
         from youtube_transcript_api import YouTubeTranscriptApi
-        from langchain.schema import Document
+        import urllib.parse as urlparse
+        from langchain_core.documents import Document
         from langchain.text_splitter import RecursiveCharacterTextSplitter
         from vector_store import get_embeddings
         from langchain_community.vectorstores import FAISS
@@ -288,7 +289,7 @@ async def scrape_website(link: str = Form(...)):
     try:
         import requests
         from bs4 import BeautifulSoup
-        from langchain.schema import Document
+        from langchain_core.documents import Document
         from langchain.text_splitter import RecursiveCharacterTextSplitter
         from vector_store import get_embeddings
         from langchain_community.vectorstores import FAISS
