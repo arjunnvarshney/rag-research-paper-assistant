@@ -101,12 +101,7 @@ function App() {
       setSessions(prev => {
           const updated = prev.map(s => {
               if (s.id === activeSessionId) {
-                  let name = s.name;
-                  if (name === "New Chat" && messages.length > 1) {
-                      const firstUser = messages.find(m => m.role === 'user');
-                      if (firstUser) name = firstUser.text.substring(0, 15) + "...";
-                  }
-                  return { ...s, name, messages };
+                  return { ...s, messages };
               }
               return s;
           });
@@ -224,6 +219,28 @@ function App() {
     }
   };
 
+  const ingestWebsite = async () => {
+    const link = prompt("Enter a Website URL (Wikipedia, Blog, etc.) to securely extract its text into the AI FAISS Brain:");
+    if (!link) return;
+    
+    setUploading(true);
+    setMessages(prev => [...prev, { role: 'assistant', text: `⏳ Deploying BeautifulSoup Scraper to extract HTML structure from ${link}...` }]);
+    
+    try {
+      const formData = new FormData();
+      formData.append("link", link);
+      const res = await fetch("http://localhost:8000/api/scrape", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail);
+      
+      setMessages(prev => [...prev, { role: 'assistant', text: `✅ Successfully ripped webpage text and structurally mapped it to the Vector Space!` }]);
+    } catch (err) {
+      setMessages(prev => [...prev, { role: 'assistant', text: `⚠️ Error during Web Scrape: ${err.message}` }]);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -255,6 +272,15 @@ function App() {
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     if(!overrideText) setInput('');
     setLoading(true);
+    
+    if (messages.length === 1) {
+        fetch("http://localhost:8000/api/title", {
+           method: "POST", headers: { "Content-Type": "application/json" },
+           body: JSON.stringify({ query: userMsg })
+        }).then(r=>r.json()).then(data => {
+           setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, name: data.title } : s));
+        }).catch(()=>{});
+    }
 
     try {
       const res = await fetch("http://localhost:8000/api/chat", {
@@ -352,7 +378,11 @@ function App() {
             <button className="action-btn danger-btn" onClick={resetDashboard}>🧠 Wipe All</button>
             
             <button className="action-btn" style={{color: '#f87171'}} onClick={ingestYouTube} disabled={uploading}>
-              {uploading ? "⏳ Analyzing..." : "▶️ Ingest YouTube Video"}
+              {uploading ? "⏳..." : "▶️ YouTube"}
+            </button>
+
+            <button className="action-btn" style={{color: '#34d399'}} onClick={ingestWebsite} disabled={uploading}>
+              {uploading ? "⏳..." : "🔗 Web Link"}
             </button>
 
             <div className="upload-container">

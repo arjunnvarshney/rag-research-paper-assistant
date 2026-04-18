@@ -48,6 +48,9 @@ class ChatRequest(BaseModel):
     language: str = "English"
     search_mode: str = "pdf" # 'pdf' or 'web'
 
+class TitleRequest(BaseModel):
+    query: str
+
 @app.get("/api/metrics")
 async def get_metrics():
     global vector_store
@@ -278,6 +281,54 @@ async def wipe_memory():
             pass
             
     return {"success": True, "message": "Memory Wiped"}
+
+@app.post("/api/scrape")
+async def scrape_website(link: str = Form(...)):
+    global vector_store, rag_chain
+    try:
+        import requests
+        from bs4 import BeautifulSoup
+        from langchain.schema import Document
+        from langchain.text_splitter import RecursiveCharacterTextSplitter
+        from vector_store import get_embeddings
+        from langchain_community.vectorstores import FAISS
+        
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+        res = requests.get(link, headers=headers, timeout=10)
+        soup = BeautifulSoup(res.text, "html.parser")
+        
+        for script in soup(["script", "style"]):
+            script.extract()
+        text = soup.get_text(separator=" ", strip=True)
+        
+        docs = [Document(page_content=text, metadata={"source_file": "Web Article", "page": link})]
+        
+        splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=150)
+        splits = splitter.split_documents(docs)
+        
+        if vector_store:
+            vector_store.add_documents(splits)
+        else:
+            vector_store = FAISS.from_documents(splits, get_embeddings())
+            
+        vector_store.save_local(DB_PATH)
+        rag_chain = create_rag_chain(vector_store)
+        
+        return {"success": True, "message": "Website scraped successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/title")
+async def generate_title(request: TitleRequest):
+    try:
+        from langchain_groq import ChatGroq
+        from langchain_core.prompts import PromptTemplate
+        llm = ChatGroq(temperature=0.7, model_name="llama-3.1-8b-instant")
+        prompt = PromptTemplate.from_template("Generate a very short, clever 3-5 word title summarizing this specific chat topic. DO NOT USE QUOTES or extra text. Topic: {query}")
+        ans = (prompt | llm).invoke({"query": request.query})
+        return {"title": ans.content.strip().replace('"', '')}
+    except Exception as e:
+        return {"title": request.query[:15] + "..."}
 
 if __name__ == "__main__":
     import uvicorn
