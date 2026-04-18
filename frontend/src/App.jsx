@@ -71,6 +71,10 @@ function App() {
   const [isListening, setIsListening] = useState(false);
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
+  // Hands-Free Auto-Pilot
+  const [handsFreeMode, setHandsFreeMode] = useState(false);
+  const handsFreeRef = useRef(false);
+
   // New Global App States
   const [targetLanguage, setTargetLanguage] = useState('English');
   const [theme, setTheme] = useState('glass');
@@ -142,6 +146,12 @@ function App() {
       if(targetLanguage === "Spanish") msg.lang = 'es-ES';
       if(targetLanguage === "French") msg.lang = 'fr-FR';
       if(targetLanguage === "Hindi") msg.lang = 'hi-IN';
+      
+      msg.onend = () => {
+         if (handsFreeRef.current) {
+             toggleListening(); // Autonomous Loop: AI done speaking -> Instantly activate mic
+         }
+      };
       window.speechSynthesis.speak(msg);
     }
   };
@@ -155,7 +165,13 @@ function App() {
     if(targetLanguage === "French") recognition.lang = 'fr-FR';
     
     recognition.onstart = () => setIsListening(true);
-    recognition.onresult = (e) => setInput(prev => prev + (prev.endsWith(' ') ? '' : ' ') + e.results[0][0].transcript);
+    recognition.onresult = (e) => {
+        const transcript = e.results[0][0].transcript;
+        setInput(prev => prev + (prev.endsWith(' ') ? '' : ' ') + transcript);
+        if (handsFreeRef.current) {
+            handleSend(transcript); // Autonomous Loop: User done dictating -> Instantly hit backend
+        }
+    };
     recognition.onerror = () => setIsListening(false);
     recognition.onend = () => setIsListening(false);
     recognition.start();
@@ -354,7 +370,9 @@ function App() {
                <div className={`message-bubble ${msg.role}`}>
                  
                  {msg.role === 'assistant' ? (
-                   <TypewriterMessage msgObj={msg} />
+                   <TypewriterMessage msgObj={msg} onComplete={() => {
+                       if (handsFreeRef.current) handleSpeak(msg.text); // Autonomous Loop: Typewriter done -> Instantly read aloud
+                   }} />
                  ) : (
                    <p style={{ whiteSpace: "pre-wrap" }}>{msg.text}</p>
                  )}
@@ -388,7 +406,16 @@ function App() {
 
         <div className="input-area">
           <textarea placeholder={searchMode === 'web' ? 'Ask an open-ended Internet Question...' : `Ask your AI directly in ${targetLanguage}...`} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown} rows={1} />
-          <button onClick={toggleListening} className={`mic-btn ${isListening ? 'listening' : ''}`} title="Voice Dictation">🎤</button>
+          
+          <button onClick={() => {
+             const val = !handsFreeMode;
+             setHandsFreeMode(val); handsFreeRef.current = val;
+             if(val) toggleListening(); else window.speechSynthesis.cancel();
+          }} className={`mic-btn ${handsFreeMode ? 'listening' : ''}`} style={{ width: 'auto', padding: '0 15px', borderRadius: '15px' }} title="Hands-Free Autopilot">
+             {handsFreeMode ? "🛑 Auto-Pilot ON" : "🤖 Auto-Pilot OFF"}
+          </button>
+          
+          <button onClick={toggleListening} className={`mic-btn ${isListening && !handsFreeMode ? 'listening' : ''}`} title="Voice Dictation">🎤</button>
           <button onClick={() => handleSend(input)} disabled={!input.trim() || loading} className="send-btn">{loading ? "..." : "Send"}</button>
         </div>
       </main>
