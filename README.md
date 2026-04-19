@@ -1,22 +1,22 @@
-# 📚 Enterprise GenAI Research Assistant (Multi-Modal RAG Platform)
+# Enterprise GenAI Research Assistant (Multi-Modal RAG Platform)
 
 ## Project Overview
 This repository contains a production-grade, advanced **GenAI Research Assistant** built for complex academic literature review and multi-modal analysis. Moving far beyond standard text-based retrieval, this system leverages a fully custom **Retrieval-Augmented Generation (RAG)** architecture with integrated audio, visual, and autonomous agent capabilities.
 
 The platform is meticulously engineered to prevent LLM hallucinations by grounding every answer in verified data, making it a critical tool for researchers, scientists, and academics.
 
-## 🌟 Breakthrough Features
+##  Breakthrough Features
 We have completely overhauled the standard RAG pipeline to introduce state-of-the-art enterprise features:
 
-*   **🎙️ Autonomous Voice Loop:** A zero-UI, completely hands-free continuous voice conversation engine (Speech-to-Text -> LLM Inference -> Text-to-Speech -> Mic Triggering). 
-*   **👁️ LLaVA Vision Protocol:** Integrated with `llama-3.2-11b-vision` to ingest and mathematically analyze screenshots of complex academic charts, graphs, and diagrams.
-*   **🌐 Explicit Web-Search Agent:** A toggleable fallback agent mode that physically bypasses the FAISS memory banks to perform live, real-time internet queries via `duckduckgo-search`.
-*   **▶️ YouTube & Web Scraper Ingestion:** Dynamically rip and inject mathematical YouTube transcripts (`youtube-transcript-api`) or HTML website structures (`BeautifulSoup`) straight into the vector space.
-*   **🔐 Role-Based Access Control (RBAC):** Strict security tiering separating Admin (Write/Wipe Access) and Guest (Read/Chat) roles, mapped to fully decoupled LocalStorage session states.
-*   **🎨 Universal Theme Engine:** A stunning React UI powered by raw CSS variables supporting **OLED Dark**, **Glassmorphism**, and **Clinical White** environments.
-*   **🧠 Auto-Titling Llama-3 Engine:** A background pipeline automatically parses your first query to dynamically title your chat threads.
+*   ** Autonomous Voice Loop:** A zero-UI, completely hands-free continuous voice conversation engine (Speech-to-Text -> LLM Inference -> Text-to-Speech -> Mic Triggering). 
+*   ** LLaVA Vision Protocol:** Integrated with `llama-3.2-11b-vision` to ingest and mathematically analyze screenshots of complex academic charts, graphs, and diagrams.
+*   ** Explicit Web-Search Agent:** A toggleable fallback agent mode that physically bypasses the FAISS memory banks to perform live, real-time internet queries via `duckduckgo-search`.
+*   ** YouTube & Web Scraper Ingestion:** Dynamically rip and inject mathematical YouTube transcripts (`youtube-transcript-api`) or HTML website structures (`BeautifulSoup`) straight into the vector space.
+*   ** Role-Based Access Control (RBAC):** Strict security tiering separating Admin (Write/Wipe Access) and Guest (Read/Chat) roles, mapped to fully decoupled LocalStorage session states.
+*   ** Universal Theme Engine:** A stunning React UI powered by raw CSS variables supporting **OLED Dark**, **Glassmorphism**, and **Clinical White** environments.
+*   ** Auto-Titling Llama-3 Engine:** A background pipeline automatically parses your first query to dynamically title your chat threads.
 
-## 🛠️ Architecture & Tech Stack
+##  Architecture & Tech Stack
 
 **Backend (API & AI Inference):**
 *   **FastAPI:** High-performance async Python backend serving JSON-RPC endpoints.
@@ -29,7 +29,7 @@ We have completely overhauled the standard RAG pipeline to introduce state-of-th
 *   **React + Vite:** Lightning-fast, HMR-enabled client ecosystem.
 *   **Custom Vanilla CSS:** No Tailwind—just highly optimized, hardware-accelerated CSS animations and grid layouts.
 
-## 🚀 Setup & Execution
+##  Setup & Execution
 
 ### 1. Initialize the Python Backend
 The backend manages the heavy AI compute, memory indexing, and web agent routing.
@@ -54,7 +54,7 @@ npm run dev
 Navigate to `http://localhost:5173`. 
 *Login as **admin** to gain full upload/wipe access, or select **Access as Guest** to interact strictly with the predefined context.*
 
-## 🔬 The Science: RAG Implementation
+##  The Science: RAG Implementation
 This architecture is originally inspired by:
 > **"Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks"** (Lewis et al., NeurIPS 2020)
 
