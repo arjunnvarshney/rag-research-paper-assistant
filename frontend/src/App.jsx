@@ -96,6 +96,7 @@ function App() {
       }
       setSessions(initial);
       setActiveSessionId(initial[0].id);
+      setMessages(initial[0].messages);
   };
 
   useEffect(() => {
@@ -128,6 +129,7 @@ function App() {
       const newSess = { id: Date.now(), name: "New Chat", messages: [{ role: 'assistant', text: "Ready! Upload a new PDF or talk to the Agent." }] };
       setSessions(prev => [newSess, ...prev]);
       setActiveSessionId(newSess.id);
+      setMessages(newSess.messages);
   };
 
   useEffect(() => { endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, loading, uploading]);
@@ -209,6 +211,7 @@ function App() {
     const blank = [{ id: Date.now(), name: "First Research", messages: [{ role: 'assistant', text: "Memory Professionally wiped! Ready."}] }];
     setSessions(blank);
     setActiveSessionId(blank[0].id);
+    setMessages(blank[0].messages);
     setSelectedPdfUrl(null);
   };
 
@@ -367,7 +370,7 @@ function App() {
          <p className="sidebar-title">Recent Threads</p>
          <div className="sessions-list">
             {sessions.map(s => (
-               <div key={s.id} className={`session-item ${s.id === activeSessionId ? 'active' : ''}`} onClick={() => setActiveSessionId(s.id)}>
+               <div key={s.id} className={`session-item ${s.id === activeSessionId ? 'active' : ''}`} onClick={() => { setActiveSessionId(s.id); setMessages(s.messages); }}>
                    💬 {s.name}
                </div>
             ))}
