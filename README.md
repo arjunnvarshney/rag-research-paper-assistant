@@ -8,13 +8,13 @@ The platform is meticulously engineered to prevent LLM hallucinations by groundi
 ##  Breakthrough Features
 We have completely overhauled the standard RAG pipeline to introduce state-of-the-art enterprise features:
 
-*   ** Autonomous Voice Loop:** A zero-UI, completely hands-free continuous voice conversation engine (Speech-to-Text -> LLM Inference -> Text-to-Speech -> Mic Triggering). 
-*   ** LLaVA Vision Protocol:** Integrated with `llama-3.2-11b-vision` to ingest and mathematically analyze screenshots of complex academic charts, graphs, and diagrams.
-*   ** Explicit Web-Search Agent:** A toggleable fallback agent mode that physically bypasses the FAISS memory banks to perform live, real-time internet queries via `duckduckgo-search`.
-*   ** YouTube & Web Scraper Ingestion:** Dynamically rip and inject mathematical YouTube transcripts (`youtube-transcript-api`) or HTML website structures (`BeautifulSoup`) straight into the vector space.
-*   ** Role-Based Access Control (RBAC):** Strict security tiering separating Admin (Write/Wipe Access) and Guest (Read/Chat) roles, mapped to fully decoupled LocalStorage session states.
-*   ** Universal Theme Engine:** A stunning React UI powered by raw CSS variables supporting **OLED Dark**, **Glassmorphism**, and **Clinical White** environments.
-*   ** Auto-Titling Llama-3 Engine:** A background pipeline automatically parses your first query to dynamically title your chat threads.
+*    Autonomous Voice Loop: A zero-UI, completely hands-free continuous voice conversation engine (Speech-to-Text -> LLM Inference -> Text-to-Speech -> Mic Triggering). 
+*    LLaVA Vision Protocol: Integrated with `llama-3.2-11b-vision` to ingest and mathematically analyze screenshots of complex academic charts, graphs, and diagrams.
+*    Explicit Web-Search Agent: A toggleable fallback agent mode that physically bypasses the FAISS memory banks to perform live, real-time internet queries via `duckduckgo-search`.
+*    YouTube & Web Scraper Ingestion: Dynamically rip and inject mathematical YouTube transcripts (`youtube-transcript-api`) or HTML website structures (`BeautifulSoup`) straight into the vector space.
+*    Role-Based Access Control (RBAC): Strict security tiering separating Admin (Write/Wipe Access) and Guest (Read/Chat) roles, mapped to fully decoupled LocalStorage session states.
+*    Universal Theme Engine: A stunning React UI powered by raw CSS variables supporting **OLED Dark**, **Glassmorphism**, and **Clinical White** environments.
+*    Auto-Titling Llama-3 Engine: A background pipeline automatically parses your first query to dynamically title your chat threads.
 
 ##  Architecture & Tech Stack
 
