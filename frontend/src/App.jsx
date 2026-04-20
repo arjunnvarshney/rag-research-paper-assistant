@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+
 const TypewriterMessage = ({ msgObj, onComplete }) => {
   const [displayedText, setDisplayedText] = useState("");
   const [isStopped, setIsStopped] = useState(false);
@@ -153,7 +155,7 @@ function App() {
     if (isLoggedIn) {
       const pollMetrics = async () => {
         try {
-          const res = await fetch("http://localhost:8000/api/metrics");
+          const res = await fetch(`${API_BASE}/api/metrics`);
           const data = await res.json();
           if (res.ok) setMetrics(data);
         } catch(e) {}
@@ -215,7 +217,7 @@ function App() {
   const resetDashboard = async () => {
     if (!window.confirm("WARNING: This destroys the AI FAISS Math engine and deletes all cached Chat Sessions completely. Continue?")) return;
     try { 
-      const res = await fetch("http://localhost:8000/api/wipe", { method: "POST" });
+      const res = await fetch(`${API_BASE}/api/wipe`, { method: "POST" });
       if (!res.ok) alert("Backend Server error: You MUST restart your Python terminal server (Ctrl+C then python server.py) to enable the Wipe feature!");
     } catch (e) {
       alert("Network Error: Make sure your Python backend server is running.");
@@ -257,7 +259,7 @@ function App() {
     try {
       const formData = new FormData();
       formData.append("link", link);
-      const res = await fetch("http://localhost:8000/api/youtube", { method: "POST", body: formData });
+      const res = await fetch(`${API_BASE}/api/youtube`, { method: "POST", body: formData });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail);
       
@@ -279,7 +281,7 @@ function App() {
     try {
       const formData = new FormData();
       formData.append("link", link);
-      const res = await fetch("http://localhost:8000/api/scrape", { method: "POST", body: formData });
+      const res = await fetch(`${API_BASE}/api/scrape`, { method: "POST", body: formData });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail);
       
@@ -302,7 +304,7 @@ function App() {
     const formData = new FormData(); 
     formData.append('image', file);
     try {
-      const res = await fetch("http://localhost:8000/api/vision", { method: "POST", body: formData });
+      const res = await fetch(`${API_BASE}/api/vision`, { method: "POST", body: formData });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Vision inference failed.");
       
@@ -325,7 +327,7 @@ function App() {
 
     const formData = new FormData(); formData.append('file', file);
     try {
-      const res = await fetch("http://localhost:8000/api/upload", { method: "POST", body: formData });
+      const res = await fetch(`${API_BASE}/api/upload`, { method: "POST", body: formData });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Upload failed");
       setMessages(prev => [...prev, { 
@@ -358,7 +360,7 @@ function App() {
     }
 
     try {
-      const res = await fetch("http://localhost:8000/api/chat", {
+      const res = await fetch(`${API_BASE}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query: userMsg, chat_history: chatHistoryStr, language: targetLanguage, search_mode: searchMode })
