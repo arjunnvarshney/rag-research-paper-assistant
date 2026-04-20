@@ -141,7 +141,7 @@ async def chat_endpoint(request: ChatRequest):
             fallback_prompt = PromptTemplate.from_template(
                 "You are an AI Web Engine. The user asked: '{query}'. Answer carefully relying ONLY on this real-time scraped web data: {web_data}\n\n(IMPORTANT:{lang_instruction} After your answer, append '|||' and 3 short follow-up questions separated by '|||'.)"
             )
-            fallback_ans = (fallback_prompt | llm).invoke({"query": request.query, "web_data": web_results[:3000]})
+            fallback_ans = (fallback_prompt | llm).invoke({"query": request.query, "web_data": web_results[:3000], "lang_instruction": lang_instruction})
             
             answer = "🌐 *Explicit Web Search Mode Triggered*\n\n"
             suggestions = []

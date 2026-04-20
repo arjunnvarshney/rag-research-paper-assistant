@@ -3,9 +3,12 @@ import './App.css';
 
 const TypewriterMessage = ({ msgObj, onComplete }) => {
   const [displayedText, setDisplayedText] = useState("");
+  const [isStopped, setIsStopped] = useState(false);
   const typeRef = useRef(null);
   
   useEffect(() => {
+    if (isStopped) return;
+    
     let currentText = "";
     let i = 0;
     
@@ -24,15 +27,26 @@ const TypewriterMessage = ({ msgObj, onComplete }) => {
        }
     }, 15);
     return () => clearInterval(interval);
-  }, [msgObj.text]);
+  }, [msgObj.text, isStopped]);
 
-  const isDone = displayedText.length === msgObj.text.length;
+  const isDone = displayedText.length === msgObj.text.length || isStopped;
 
   return (
     <div ref={typeRef}>
        <p style={{ whiteSpace: "pre-wrap" }}>
-         {displayedText}{(displayedText.length < msgObj.text.length) ? " █" : ""}
+         {displayedText}{(displayedText.length < msgObj.text.length && !isStopped) ? " █" : ""}
        </p>
+       
+       {!isDone && (
+         <button 
+           onClick={() => { setIsStopped(true); if (onComplete) onComplete(); }}
+           style={{ marginTop: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.2)', color: 'var(--text-secondary)', borderRadius: '10px', padding: '4px 12px', fontSize: '0.75rem', cursor: 'pointer', transition: 'all 0.2s' }}
+           onMouseOver={(e) => { e.target.style.color = 'white'; e.target.style.background = 'rgba(255,255,255,0.1)'; }}
+           onMouseOut={(e) => { e.target.style.color = 'var(--text-secondary)'; e.target.style.background = 'rgba(255,255,255,0.05)'; }}
+         >
+           🛑 Stop Generation
+         </button>
+       )}
        
        {isDone && msgObj.sources && msgObj.sources.length > 0 && (
          <details className="citation-box" style={{ marginTop: '15px' }}>
@@ -66,6 +80,7 @@ function App() {
   
   const [uploading, setUploading] = useState(false);
   const [selectedPdfUrl, setSelectedPdfUrl] = useState(null);
+  const [isPdfOpen, setIsPdfOpen] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -213,6 +228,23 @@ function App() {
     setActiveSessionId(blank[0].id);
     setMessages(blank[0].messages);
     setSelectedPdfUrl(null);
+    setIsPdfOpen(false);
+  };
+
+  const deleteSession = (id) => {
+    const newSessions = sessions.filter(s => s.id !== id);
+    if (newSessions.length === 0) {
+        const blank = [{ id: Date.now(), name: "First Research", messages: [{ role: 'assistant', text: "Ready! Upload a new PDF or talk to the Agent." }] }];
+        setSessions(blank);
+        setActiveSessionId(blank[0].id);
+        setMessages(blank[0].messages);
+    } else {
+        setSessions(newSessions);
+        if (activeSessionId === id) {
+            setActiveSessionId(newSessions[0].id);
+            setMessages(newSessions[0].messages);
+        }
+    }
   };
 
   const ingestYouTube = async () => {
@@ -287,6 +319,7 @@ function App() {
     const file = e.target.files[0];
     if (!file) return;
     setSelectedPdfUrl(URL.createObjectURL(file));
+    setIsPdfOpen(true);
     setUploading(true);
     setMessages(prev => [...prev, { role: 'assistant', text: `⏳ Analyzing '${file.name}' into vector space...` }]);
 
@@ -370,12 +403,23 @@ function App() {
          <p className="sidebar-title">Recent Threads</p>
          <div className="sessions-list">
             {sessions.map(s => (
-               <div key={s.id} className={`session-item ${s.id === activeSessionId ? 'active' : ''}`} onClick={() => { setActiveSessionId(s.id); setMessages(s.messages); }}>
-                   💬 {s.name}
+               <div key={s.id} className={`session-item ${s.id === activeSessionId ? 'active' : ''}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} onClick={() => { setActiveSessionId(s.id); setMessages(s.messages); }}>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>💬 {s.name}</span>
+                  <span onClick={(e) => { e.stopPropagation(); deleteSession(s.id); }} style={{ color: 'rgba(239, 68, 68, 0.8)', cursor: 'pointer', padding: '0 5px' }} title="Delete Chat">🗑️</span>
                </div>
             ))}
          </div>
-         <p className="sidebar-footer">Powered by FAISS RAG</p>
+         <div className="sidebar-footer" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+            <button 
+                onClick={() => setIsLoggedIn(false)} 
+                style={{ background: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', padding: '5px 15px', borderRadius: '15px', cursor: 'pointer', fontSize: '0.8rem', transition: 'all 0.2s' }}
+                onMouseOver={(e) => e.target.style.background = 'rgba(239, 68, 68, 0.5)'}
+                onMouseOut={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.1)'}
+            >
+                🚪 Logout / Switch Role
+            </button>
+            <p>Powered by FAISS RAG</p>
+         </div>
       </aside>
 
       <div className={`dev-sidebar glass-panel ${showDevPanel ? 'open' : ''}`}>
@@ -436,6 +480,11 @@ function App() {
                   <button className="action-btn upload-btn" style={{color: '#60a5fa'}} onClick={() => fileInputRef.current?.click()} disabled={uploading}>
                     {uploading ? "⏳ Analyzing..." : "➕ Upload Dynamic PDF"}
                   </button>
+                  {selectedPdfUrl && !isPdfOpen && (
+                    <button className="action-btn" onClick={() => setIsPdfOpen(true)} style={{ color: '#10b981', borderColor: 'rgba(16, 185, 129, 0.3)', marginLeft: '10px' }}>
+                      📄 View PDF
+                    </button>
+                  )}
                 </div>
               </>
             )}
@@ -501,8 +550,16 @@ function App() {
         </div>
       </main>
 
-      {selectedPdfUrl && (
-        <aside className="pdf-viewer-pane"><iframe src={selectedPdfUrl} title="PDF Viewer" width="100%" height="100%" frameBorder="0" /></aside>
+      {(isPdfOpen && selectedPdfUrl) && (
+        <aside className="pdf-viewer-pane" style={{ position: 'relative' }}>
+          <button 
+             onClick={() => setIsPdfOpen(false)}
+             style={{ position: 'absolute', top: 15, left: 15, background: 'rgba(239, 68, 68, 0.9)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', padding: '8px 15px', cursor: 'pointer', zIndex: 50, fontWeight: 'bold', boxShadow: '0 4px 6px rgba(0,0,0,0.3)', backdropFilter: 'blur(10px)' }}
+          >
+             ✖ Close PDF
+          </button>
+          <iframe src={selectedPdfUrl} title="PDF Viewer" width="100%" height="100%" frameBorder="0" />
+        </aside>
       )}
     </div>
   );
