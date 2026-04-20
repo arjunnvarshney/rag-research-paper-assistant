@@ -4,11 +4,10 @@ python-multipart
 langchain
 langchain-core
 langchain-community
-langchain-huggingface
+fastembed
 langchain-groq
 groq
 faiss-cpu
-sentence-transformers
 PyMuPDF
 duckduckgo-search
 youtube-transcript-api

@@ -1,19 +1,19 @@
 import os
 from langchain_community.vectorstores import FAISS
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
 
 from ingest import load_all_pdfs, chunk_documents
 
-# The HuggingFace embedding model we will use to generate mathematical vectors
-EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+# We use FastEmbed (ONNX) instead of HuggingFace (PyTorch) to drastically reduce RAM usage (<512MB)
+EMBEDDING_MODEL_NAME = "BAAI/bge-small-en-v1.5"
 
 def create_vector_store(chunks, db_path="faiss_index"):
     """
     Embeds document chunks into continuous vector space and saves them into a local FAISS index.
     """
     print(f"Initializing embedding model: {EMBEDDING_MODEL_NAME} ...")
-    # This automatically downloads the model weights from HuggingFace upon first run
-    embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL_NAME)
+    # This automatically downloads the ONNX model weights from HuggingFace upon first run
+    embeddings = FastEmbedEmbeddings(model_name=EMBEDDING_MODEL_NAME)
     
     print(f"Embedding {len(chunks)} chunks and building FAISS index. This may take a moment...")
     vector_store = FAISS.from_documents(chunks, embeddings)

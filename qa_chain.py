@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 
 # Langchain core imports
 from langchain_community.vectorstores import FAISS
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
 from langchain_groq import ChatGroq
 from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnablePassthrough, RunnableParallel
@@ -12,10 +12,10 @@ from operator import itemgetter
 
 load_dotenv()
 
-EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+EMBEDDING_MODEL_NAME = "BAAI/bge-small-en-v1.5"
 
 def load_vector_store(db_path="faiss_index"):
-    embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL_NAME)
+    embeddings = FastEmbedEmbeddings(model_name=EMBEDDING_MODEL_NAME)
     # allow_dangerous_deserialization is required locally to load the pickle file from FAISS
     vector_store = FAISS.load_local(db_path, embeddings, allow_dangerous_deserialization=True)
     return vector_store
