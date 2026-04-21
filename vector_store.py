@@ -1,19 +1,13 @@
 import os
 from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
-
+from shared_resources import get_embeddings
 from ingest import load_all_pdfs, chunk_documents
-
-# We use FastEmbed (ONNX) instead of HuggingFace (PyTorch) to drastically reduce RAM usage (<512MB)
-EMBEDDING_MODEL_NAME = "BAAI/bge-small-en-v1.5"
 
 def create_vector_store(chunks, db_path="faiss_index"):
     """
     Embeds document chunks into continuous vector space and saves them into a local FAISS index.
     """
-    print(f"Initializing embedding model: {EMBEDDING_MODEL_NAME} ...")
-    # This automatically downloads the ONNX model weights from HuggingFace upon first run
-    embeddings = FastEmbedEmbeddings(model_name=EMBEDDING_MODEL_NAME)
+    embeddings = get_embeddings()
     
     print(f"Embedding {len(chunks)} chunks and building FAISS index. This may take a moment...")
     vector_store = FAISS.from_documents(chunks, embeddings)
