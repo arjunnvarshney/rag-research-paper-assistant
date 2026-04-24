@@ -146,6 +146,15 @@ async def upload_document(file: UploadFile = File(...)):
         # Cleanup: Remove the raw PDF file from disk after ingestion to save space/RAM
         if 'file_path' in locals() and os.path.exists(file_path):
             os.remove(file_path)
+            
+        # Linux-specific Magic Bullet: Force release memory to the OS
+        try:
+            import ctypes
+            libc = ctypes.CDLL("libc.so.6")
+            libc.malloc_trim(0)
+        except Exception:
+            pass
+            
         gc.collect() # Force memory cleanup after heavy processing
 
 @app.post("/api/chat")

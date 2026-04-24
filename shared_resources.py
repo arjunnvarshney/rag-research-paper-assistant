@@ -11,9 +11,12 @@ os.environ["NUMEXPR_NUM_THREADS"] = "1"
 # Specific ONNX Runtime limits
 os.environ["ORT_INTRA_OP_NUM_THREADS"] = "1"
 os.environ["ORT_INTER_OP_NUM_THREADS"] = "1"
+# Linux Memory Trimming (Very important for Render/Docker)
+os.environ["MALLOC_TRIM_THRESHOLD_"] = "131072"
 
 # Singleton instance to save RAM on memory-constrained environments like Render Free Tier (512MB)
-EMBEDDING_MODEL_NAME = "BAAI/bge-small-en-v1.5"
+# Switched to MiniLM-L6 which is ~90MB (40MB smaller than BGE-Small)
+EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
 _embeddings = None
 _llm = None
