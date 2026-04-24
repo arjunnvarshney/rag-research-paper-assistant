@@ -124,9 +124,9 @@ async def upload_document(file: UploadFile = File(...)):
         
         summary = "No readable text found for summarization."
         if combined_text.strip():
-            from langchain_groq import ChatGroq
+            from shared_resources import get_llm
             from langchain_core.prompts import PromptTemplate
-            llm_summarizer = ChatGroq(temperature=0.2, model_name="llama-3.1-8b-instant")
+            llm_summarizer = get_llm(model_name="llama-3.1-8b-instant", temperature=0.2)
             summary_prompt = PromptTemplate.from_template(
                 "You are an expert academic researcher. Read the following introductory excerpts from a newly uploaded document named '{filename}':\n\n{text}\n\nWrite a concise 2-paragraph executive summary detailing the core problem and the proposed solution of this paper. Make it sound extremely professional and engaging."
             )
@@ -165,7 +165,8 @@ async def chat_endpoint(request: ChatRequest):
             except Exception as e:
                 web_results = f"DuckDuckGo Search Engine blocked the request (Rate Limit / Connection Error). Unable to fetch live data. Error trace: {str(e)}"
                 
-            llm = ChatGroq(temperature=0.4, model_name="llama-3.1-8b-instant")
+            from shared_resources import get_llm
+            llm = get_llm(model_name="llama-3.1-8b-instant", temperature=0.4)
             
             lang_instruction = f" You MUST translate your entire answer and output perfectly into {request.language}." if request.language != "English" else ""
             fallback_prompt = PromptTemplate.from_template(

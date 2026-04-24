@@ -29,7 +29,8 @@ def create_rag_chain(vector_store):
 
     retriever = vector_store.as_retriever(search_kwargs={"k": 3})
     
-    llm = ChatGroq(temperature=0, model_name="llama-3.1-8b-instant")
+    from shared_resources import get_llm
+    llm = get_llm(model_name="llama-3.1-8b-instant", temperature=0)
     
     template = """You are a highly intelligent academic Research Paper Assistant.
 For any questions regarding facts, concepts, or information, you MUST answer based strictly on the provided Context excerpts. If the answer is not present in the Context, you must say "I don't know based on the provided research papers," do not guess or hallucinate outside facts.
