@@ -29,18 +29,27 @@ DATASET_DIR = os.path.join(BASE_DIR, "dataset")
 import time
 START_TIME = time.time()
 
-# Global variables so that we can HOT-SWAP the brain when a new PDF is uploaded!
-global vector_store
-global rag_chain
+# Global variables for the AI Brain
+vector_store = None
+rag_chain = None
 
-print("Initializing AI Brain...")
-try:
-    vector_store = load_vector_store(DB_PATH)
-    rag_chain = create_rag_chain(vector_store)
-except Exception as e:
-    print(f"Warning: Database not found or corrupt. AI will initialize upon first PDF upload. ({e})")
-    vector_store = None
-    rag_chain = None
+def ensure_brain_loaded():
+    """
+    Lazy-loads the AI brain only when needed to save RAM during server startup.
+    """
+    global vector_store, rag_chain
+    if vector_store is None:
+        print("Lazy-loading AI Brain into memory...")
+        try:
+            if os.path.exists(DB_PATH):
+                vector_store = load_vector_store(DB_PATH)
+                rag_chain = create_rag_chain(vector_store)
+            else:
+                print("No local database found. Brain will initialize on first upload.")
+        except Exception as e:
+            print(f"Warning: Failed to lazy-load brain: {e}")
+            vector_store = None
+            rag_chain = None
 
 class ChatRequest(BaseModel):
     query: str
@@ -54,6 +63,7 @@ class TitleRequest(BaseModel):
 @app.get("/api/metrics")
 async def get_metrics():
     global vector_store
+    ensure_brain_loaded()
     uptime_seconds = int(time.time() - START_TIME)
     
     vec_count = 0
@@ -78,6 +88,7 @@ async def upload_document(file: UploadFile = File(...)):
     """
     global vector_store
     global rag_chain
+    ensure_brain_loaded()
     
     os.makedirs(DATASET_DIR, exist_ok=True)
     file_path = os.path.join(DATASET_DIR, file.filename)
@@ -131,10 +142,16 @@ async def upload_document(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to ingest document: {str(e)}")
     finally:
+        # Cleanup: Remove the raw PDF file from disk after ingestion to save space/RAM
+        if 'file_path' in locals() and os.path.exists(file_path):
+            os.remove(file_path)
         gc.collect() # Force memory cleanup after heavy processing
 
 @app.post("/api/chat")
 async def chat_endpoint(request: ChatRequest):
+    global vector_store
+    global rag_chain
+    ensure_brain_loaded()
     try:
         from langchain_community.tools import DuckDuckGoSearchRun
         from langchain_groq import ChatGroq
