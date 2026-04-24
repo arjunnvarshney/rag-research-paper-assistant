@@ -282,7 +282,8 @@ async def process_youtube(link: str = Form(...)):
         splits = splitter.split_documents(docs)
         
         
-        embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+        from shared_resources import get_embeddings
+        embeddings = get_embeddings()
         
         if vector_store:
             vector_store.add_documents(splits)
@@ -315,6 +316,8 @@ async def wipe_memory():
         except Exception:
             pass
             
+    import gc
+    gc.collect() # Instantly release RAM after wiping
     return {"success": True, "message": "Memory Wiped"}
 
 @app.post("/api/scrape")
@@ -341,7 +344,8 @@ async def scrape_website(link: str = Form(...)):
         splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=150)
         splits = splitter.split_documents(docs)
         
-        embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+        from shared_resources import get_embeddings
+        embeddings = get_embeddings()
         
         if vector_store:
             vector_store.add_documents(splits)
