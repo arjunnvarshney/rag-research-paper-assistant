@@ -106,7 +106,8 @@ async def upload_document(file: UploadFile = File(...)):
         for doc in new_docs:
             doc.metadata['source_file'] = file.filename
         
-        new_chunks = chunk_documents(new_docs)
+        new_chunks = chunk_documents(new_docs, chunk_size=500, chunk_overlap=50)
+        del new_docs # Instantly free the raw document objects from RAM
         
         # Incremental Update: Add to existing store instead of re-creating everything
         if vector_store is None:

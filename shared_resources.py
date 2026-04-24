@@ -8,6 +8,9 @@ os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
+# Specific ONNX Runtime limits
+os.environ["ORT_INTRA_OP_NUM_THREADS"] = "1"
+os.environ["ORT_INTER_OP_NUM_THREADS"] = "1"
 
 # Singleton instance to save RAM on memory-constrained environments like Render Free Tier (512MB)
 EMBEDDING_MODEL_NAME = "BAAI/bge-small-en-v1.5"
