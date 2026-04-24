@@ -86,18 +86,29 @@ async def upload_document(file: UploadFile = File(...)):
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
         
+    import gc
     try:
-        # Dynamically trigger the ingestion pipeline!
-        documents = load_all_pdfs(DATASET_DIR)
-        chunks = chunk_documents(documents)
+        # Load ONLY the newly uploaded file to save RAM
+        from langchain_community.document_loaders import PyMuPDFLoader
+        loader = PyMuPDFLoader(file_path)
+        new_docs = loader.load()
+        for doc in new_docs:
+            doc.metadata['source_file'] = file.filename
         
-        # Completely re-create and save the FAISS vector index with the new chunks
-        vector_store = create_vector_store(chunks, DB_PATH)
+        new_chunks = chunk_documents(new_docs)
+        
+        # Incremental Update: Add to existing store instead of re-creating everything
+        if vector_store is None:
+            vector_store = create_vector_store(new_chunks, DB_PATH)
+        else:
+            vector_store.add_documents(new_chunks)
+            vector_store.save_local(DB_PATH)
+            
+        # Refresh the RAG chain with the updated vector store
         rag_chain = create_rag_chain(vector_store)
         
         # 🚀 Generate Automated Executive Summary:
-        # Extract the first 4 chunks (usually Title, Abstract, and Intro) of the uploaded file
-        latest_chunks = [c.page_content for c in chunks if c.metadata.get("source_file") == file.filename][:4]
+        latest_chunks = [c.page_content for c in new_chunks][:4]
         combined_text = "\n\n".join(latest_chunks)
         
         summary = "No readable text found for summarization."
@@ -119,6 +130,8 @@ async def upload_document(file: UploadFile = File(...)):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to ingest document: {str(e)}")
+    finally:
+        gc.collect() # Force memory cleanup after heavy processing
 
 @app.post("/api/chat")
 async def chat_endpoint(request: ChatRequest):

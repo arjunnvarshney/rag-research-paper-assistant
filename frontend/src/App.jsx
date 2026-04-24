@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 
 const TypewriterMessage = ({ msgObj, onComplete }) => {
   const [displayedText, setDisplayedText] = useState("");
@@ -351,7 +351,7 @@ function App() {
     setLoading(true);
     
     if (messages.length === 1) {
-        fetch("http://localhost:8000/api/title", {
+        fetch(`${API_BASE}/api/title`, {
            method: "POST", headers: { "Content-Type": "application/json" },
            body: JSON.stringify({ query: userMsg })
         }).then(r=>r.json()).then(data => {
